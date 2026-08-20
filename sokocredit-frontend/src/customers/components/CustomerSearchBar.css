@@ -1,0 +1,50 @@
+/* src/features/customers/components/CustomerSearchBar.css */
+
+.customer-search-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.customer-search-bar__input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #ffffff;
+}
+
+.customer-search-bar__input input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+  color: #14181f;
+}
+
+.customer-search-bar__select {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #14181f;
+  background: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .customer-search-bar {
+    flex-wrap: wrap;
+  }
+
+  .customer-search-bar__input {
+    flex-basis: 100%;
+  }
+
+  .customer-search-bar__select,
+  .customer-search-bar .btn {
+    flex: 1;
+  }
+}
