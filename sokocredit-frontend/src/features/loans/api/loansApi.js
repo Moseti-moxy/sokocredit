@@ -5,10 +5,10 @@ export const customers = [
 ]
 
 export const loans = [
-  { id: 'L-4921', customer: 'Mary Wanjiku', customerId: 'C-1001', initials: 'MW', business: 'Fruit Vendor', amount: 20000, interestRate: 10, duration: 4, frequency: 'monthly', paid: 15000, progress: 75, status: 'Repaying', due: 'Oct 15, 2026', appliedAt: '2026-06-01', approvedAt: '2026-06-02', disbursedAt: '2026-06-03', schedule: [] },
-  { id: 'L-4811', customer: 'John Ochieng', customerId: 'C-1002', initials: 'JO', business: 'Hardware Stall', amount: 50000, interestRate: 12, duration: 6, frequency: 'monthly', paid: 15000, progress: 30, status: 'Overdue 14 Days', due: 'Sep 15, 2026', appliedAt: '2026-03-01', approvedAt: '2026-03-02', disbursedAt: '2026-03-03', schedule: [] },
-  { id: 'L-5012', customer: 'Sarah Amina', customerId: 'C-1003', initials: 'SA', business: 'Textiles', amount: 10000, interestRate: 8, duration: 3, frequency: 'monthly', paid: 1000, progress: 10, status: 'Due Tomorrow', due: 'Aug 21, 2026', appliedAt: '2026-07-01', approvedAt: '2026-07-02', disbursedAt: '2026-07-03', schedule: [] },
-  { id: 'L-5120', customer: 'Mary Wanjiku', customerId: 'C-1001', initials: 'MW', business: 'Fruit Vendor', amount: 30000, interestRate: 10, duration: 6, frequency: 'monthly', paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval', appliedAt: '2026-08-18', schedule: [] },
+  { id: 'L-4921', customer: 'Jane Doe', customerId: 'SC-2023-894', initials: 'JD', business: 'Fresh Produce Vendor', amount: 20000, interestRate: 10, duration: 4, frequency: 'monthly', paid: 15000, progress: 75, status: 'Repaying', due: 'Oct 15, 2026', appliedAt: '2026-06-01', approvedAt: '2026-06-02', disbursedAt: '2026-06-03', schedule: [] },
+  { id: 'L-4811', customer: 'Samuel Ochieng', customerId: 'SC-2023-742', initials: 'SO', business: 'Hardware Supplies', amount: 50000, interestRate: 12, duration: 6, frequency: 'monthly', paid: 15000, progress: 30, status: 'Overdue 14 Days', due: 'Sep 15, 2026', appliedAt: '2026-03-01', approvedAt: '2026-03-02', disbursedAt: '2026-03-03', schedule: [] },
+  { id: 'L-5012', customer: 'Mary Njoroge', customerId: 'SC-2022-105', initials: 'MN', business: 'Textiles & Fabrics', amount: 10000, interestRate: 8, duration: 3, frequency: 'monthly', paid: 1000, progress: 10, status: 'Due Tomorrow', due: 'Aug 21, 2026', appliedAt: '2026-07-01', approvedAt: '2026-07-02', disbursedAt: '2026-07-03', schedule: [] },
+  { id: 'L-5120', customer: 'Jane Doe', customerId: 'SC-2023-894', initials: 'JD', business: 'Fresh Produce Vendor', amount: 30000, interestRate: 10, duration: 6, frequency: 'monthly', paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval', appliedAt: '2026-08-18', schedule: [] },
 ]
 
 export const money = (value) => new Intl.NumberFormat('en-KE', { maximumFractionDigits: 2 }).format(Number(value) || 0)

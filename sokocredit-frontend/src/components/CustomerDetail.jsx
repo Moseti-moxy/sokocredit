@@ -56,7 +56,7 @@ export default function CustomerDetail({ customer }) {
           </div>
         </div>
 
-        <button onClick={() => navigate('/loans')} className="mt-5 w-full sm:w-auto bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-5 py-2.5 transition-colors">
+        <button onClick={() => navigate(`/loans?customer=${encodeURIComponent(customer.id)}`)} className="mt-5 w-full sm:w-auto bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-5 py-2.5 transition-colors">
           Issue Loan
         </button>
       </div>
@@ -98,7 +98,7 @@ export default function CustomerDetail({ customer }) {
       <div className="bg-white rounded-2xl border border-brand-100 p-5">
         <div className="flex items-center justify-between mb-3">
           <h4 className="font-display font-semibold text-slate-900 text-sm">Payment History</h4>
-          <a href="#" className="text-xs font-medium text-brand-600 hover:underline">View All</a>
+          <button type="button" onClick={() => navigate(`/analytics?customer=${encodeURIComponent(customer.id)}`)} className="text-xs font-medium text-brand-600 hover:underline">View All</button>
         </div>
         <div className="space-y-3">
           {customer.paymentHistory.length === 0 && (

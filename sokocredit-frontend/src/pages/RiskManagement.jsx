@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { Link } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import { creditScoreDistribution, delinquencyTrends, crbIntegrations, highRiskAccounts } from '../data/mockData';
 import { formatKES } from '../utils/format';
@@ -15,7 +16,7 @@ export default function RiskManagement() {
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display font-semibold text-slate-900">Credit Score Distribution</h2>
-            <a href="#" className="text-xs font-medium text-brand-600 hover:underline">View Report</a>
+            <Link to="/reports" className="text-xs font-medium text-brand-600 hover:underline">View Report</Link>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -42,9 +43,9 @@ export default function RiskManagement() {
               </div>
             ))}
           </div>
-          <button className="w-full border border-brand-200 text-brand-700 font-medium rounded-xl py-2.5 text-sm hover:bg-brand-50">
+          <Link to="/settings" className="block w-full border border-brand-200 text-brand-700 font-medium rounded-xl py-2.5 text-sm hover:bg-brand-50 text-center">
             Manage Integrations
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -76,7 +77,7 @@ export default function RiskManagement() {
               <div key={a.id} className="border border-red-100 bg-red-50/40 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-slate-900">{a.id}</span>
-                  <a href="#" className="text-xs font-medium text-brand-600">Review</a>
+                  <Link to="/reports#high-risk-borrowers" className="text-xs font-medium text-brand-600">Review</Link>
                 </div>
                 <p className="text-xs text-red-600 mb-1">{a.factor}</p>
                 <p className="text-xs text-slate-500">Exposure: {formatKES(a.exposure)}</p>
@@ -100,7 +101,7 @@ export default function RiskManagement() {
                     <td className="py-2.5 font-medium text-slate-800">{a.id}</td>
                     <td className="py-2.5 text-red-600">{a.factor}</td>
                     <td className="py-2.5 text-slate-600">{formatKES(a.exposure)}</td>
-                    <td className="py-2.5"><a href="#" className="text-brand-600 font-medium hover:underline">Review</a></td>
+                    <td className="py-2.5"><Link to="/reports#high-risk-borrowers" className="text-brand-600 font-medium hover:underline">Review</Link></td>
                   </tr>
                 ))}
               </tbody>

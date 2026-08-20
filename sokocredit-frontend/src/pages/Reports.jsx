@@ -189,7 +189,7 @@ export default function Reports() {
 
       {/* Payment pattern + high-risk table */}
       <div className="grid lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-brand-100 p-4 sm:p-5">
+        <div id="high-risk-borrowers" className="bg-white rounded-2xl border border-brand-100 p-4 sm:p-5">
           <h2 className="font-display font-semibold text-slate-900 mb-1">Payment Pattern</h2>
           <p className="text-xs text-slate-500 mb-4">On-time vs. late repayments, week over week.</p>
           <div className="h-56">

@@ -6,7 +6,7 @@ import CollectionTargets from '../components/CollectionTargets';
 import { currentAgent, dashboardStats, recentActivity, portfolioTrend } from '../data/mockData';
 import { formatKES, formatCompactKES } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -96,11 +96,11 @@ export default function Dashboard() {
 
       {/* Quick actions: stack on mobile, side by side from sm up */}
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
-        <button onClick={() => navigate('/customers')} className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-4 py-3.5 sm:py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+        <button onClick={() => navigate('/customers/new')} className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-4 py-3.5 sm:py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
           <UserPlus size={18} />
           New Customer
         </button>
-        <button onClick={() => navigate('/loans')} className="flex-1 flex items-center justify-center gap-2 bg-white border border-brand-200 text-brand-700 font-medium rounded-xl px-4 py-3.5 sm:py-3 hover:bg-brand-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+        <button onClick={() => navigate('/loans?view=disburse')} className="flex-1 flex items-center justify-center gap-2 bg-white border border-brand-200 text-brand-700 font-medium rounded-xl px-4 py-3.5 sm:py-3 hover:bg-brand-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
           <Send size={18} />
           Disburse Loan
         </button>
@@ -112,7 +112,7 @@ export default function Dashboard() {
       <section className="mt-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-semibold text-slate-900">Recent Activity</h2>
-          <a href="#" className="text-sm font-medium text-brand-600 hover:underline">View All</a>
+          <Link to="/reports" className="text-sm font-medium text-brand-600 hover:underline">View All</Link>
         </div>
 
         {/* Mobile: stacked cards */}

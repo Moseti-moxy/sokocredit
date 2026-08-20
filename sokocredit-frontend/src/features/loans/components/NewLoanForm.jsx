@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { calculateRepayment, customers, money } from '../api/loansApi'
+import { calculateRepayment, customers as fallbackCustomers, money } from '../api/loansApi'
 
 const input = 'app-field h-11 w-full px-3 text-sm'
 
-export default function NewLoanForm({ onCreate }) {
-  const [form, setForm] = useState({ customerId: '', amount: '', rate: '', duration: '1', frequency: 'monthly' })
+export default function NewLoanForm({ onCreate, customers = fallbackCustomers, initialCustomerId = '' }) {
+  const [form, setForm] = useState({ customerId: initialCustomerId, amount: '', rate: '', duration: '1', frequency: 'monthly' })
   const [error, setError] = useState('')
   const selectedCustomer = customers.find((customer) => customer.id === form.customerId)
   const preview = useMemo(() => calculateRepayment(form.amount, form.rate, form.duration, form.frequency), [form])

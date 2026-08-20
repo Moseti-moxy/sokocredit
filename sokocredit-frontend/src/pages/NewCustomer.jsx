@@ -23,7 +23,7 @@ export default function NewCustomer() {
       setError('Enter the customer name, business type, and market.');
       return;
     }
-    dispatch(addCustomer({
+    const customer = {
       id: `SC-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
       name: form.name.trim(),
       business: form.business.trim(),
@@ -35,8 +35,9 @@ export default function NewCustomer() {
       defaultRate: 0,
       creditScore: 0,
       paymentHistory: [],
-    }));
-    navigate('/customers');
+    };
+    dispatch(addCustomer(customer));
+    navigate(`/customers?customer=${encodeURIComponent(customer.id)}`);
   };
 
   return (

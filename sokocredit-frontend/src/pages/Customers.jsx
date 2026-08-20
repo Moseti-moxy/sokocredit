@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Plus, ChevronLeft, ChevronDown } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import CustomerDetail from '../components/CustomerDetail';
@@ -9,6 +10,7 @@ import { selectCustomer, setSearchTerm } from '../features/customers/customersSl
 export default function Customers() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { list, selectedId, searchTerm } = useSelector((state) => state.customers);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
   const [market, setMarket] = useState('All Markets');
@@ -21,8 +23,16 @@ export default function Customers() {
 
   const selected = list.find((c) => c.id === selectedId);
 
+  useEffect(() => {
+    const customerId = searchParams.get('customer');
+    if (customerId && list.some((customer) => customer.id === customerId) && customerId !== selectedId) {
+      dispatch(selectCustomer(customerId));
+    }
+  }, [dispatch, list, searchParams, selectedId]);
+
   const handleSelect = (id) => {
     dispatch(selectCustomer(id));
+    setSearchParams({ customer: id });
     setMobileView('detail');
   };
 
@@ -80,9 +90,9 @@ export default function Customers() {
                 </span>
               </button>
             ))}
-            <button className="w-full text-center text-sm font-medium text-brand-600 py-2 hover:underline">
-              Load More
-            </button>
+            <p className="w-full text-center text-sm text-slate-400 py-2">
+              Showing {filtered.length} of {list.length} customers
+            </p>
           </div>
         </div>
 
