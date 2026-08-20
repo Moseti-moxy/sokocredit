@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { calculateRepayment, generateSchedule } from './api/loansApi'
-import { initialState, loanActions, loansReducer } from './slice/loansSlice'
+import { initialState, loanActions, loansReducer } from './workflowReducer'
 import NewLoanForm from './components/NewLoanForm'
 import { DisbursementQueue, PendingQueue } from './components/LoanWorkflow'
 

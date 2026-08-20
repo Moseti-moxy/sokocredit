@@ -1,7 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
-import Loans from './pages/Loans';
+import NewCustomer from './pages/NewCustomer';
+import LoanManagementPage from './features/loans/pages/LoanManagementPage';
 import Analytics from './pages/Analytics';
 import Reports from './pages/Reports';
 import RiskManagement from './pages/RiskManagement';
@@ -22,7 +23,8 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/customers" element={<Customers />} />
-        <Route path="/loans" element={<Loans />} />
+        <Route path="/customers/new" element={<NewCustomer />} />
+        <Route path="/loans" element={<LoanManagementPage />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/risk" element={<RiskManagement />} />

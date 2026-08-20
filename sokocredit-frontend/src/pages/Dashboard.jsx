@@ -6,8 +6,10 @@ import CollectionTargets from '../components/CollectionTargets';
 import { currentAgent, dashboardStats, recentActivity, portfolioTrend } from '../data/mockData';
 import { formatKES, formatCompactKES } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const agentName = user?.name || currentAgent.name;
   const agentMarket = user?.market || currentAgent.market;
@@ -94,11 +96,11 @@ export default function Dashboard() {
 
       {/* Quick actions: stack on mobile, side by side from sm up */}
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
-        <button className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-4 py-3.5 sm:py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+        <button onClick={() => navigate('/customers')} className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-4 py-3.5 sm:py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
           <UserPlus size={18} />
           New Customer
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 bg-white border border-brand-200 text-brand-700 font-medium rounded-xl px-4 py-3.5 sm:py-3 hover:bg-brand-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+        <button onClick={() => navigate('/loans')} className="flex-1 flex items-center justify-center gap-2 bg-white border border-brand-200 text-brand-700 font-medium rounded-xl px-4 py-3.5 sm:py-3 hover:bg-brand-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
           <Send size={18} />
           Disburse Loan
         </button>

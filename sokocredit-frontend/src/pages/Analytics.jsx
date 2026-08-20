@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { Search, AlertTriangle } from 'lucide-react';
 import AppShell from '../components/AppShell';
@@ -11,6 +12,17 @@ import {
 import { formatCompactKES, formatKES } from '../utils/format';
 
 export default function Analytics() {
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [repayment, setRepayment] = useState({ borrower: '', amount: '', reference: '' });
+  const [repaymentMessage, setRepaymentMessage] = useState('');
+  const submitRepayment = (event) => {
+    event.preventDefault();
+    if (!repayment.borrower.trim() || Number(repayment.amount) <= 0 || (paymentMethod === 'M-Pesa' && !repayment.reference.trim())) {
+      setRepaymentMessage('Enter a borrower, a valid amount, and an M-Pesa reference when applicable.'); return;
+    }
+    setRepaymentMessage(`Repayment of ${formatKES(Number(repayment.amount))} recorded via ${paymentMethod}.`);
+    setRepayment({ borrower: '', amount: '', reference: '' });
+  };
   return (
     <AppShell title="Analytics & Collections" subtitle="Review portfolio performance and log new repayments.">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
@@ -115,12 +127,13 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl border border-brand-100 p-5 h-fit lg:sticky lg:top-20">
           <h2 className="font-display font-semibold text-slate-900 mb-1">Log Repayment</h2>
           <p className="text-xs text-slate-500 mb-4">Record a new collection from a borrower.</p>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={submitRepayment}>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Borrower ID or Name</label>
               <div className="relative">
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
+                  value={repayment.borrower} onChange={(e) => setRepayment({ ...repayment, borrower: e.target.value })}
                   placeholder="Search borrower..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
@@ -129,6 +142,7 @@ export default function Analytics() {
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Amount Collected (KES)</label>
               <input
+                value={repayment.amount} onChange={(e) => setRepayment({ ...repayment, amount: e.target.value })} type="number" min="0.01"
                 placeholder="0.00"
                 className="w-full px-3 py-2.5 rounded-lg border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
               />
@@ -136,13 +150,13 @@ export default function Analytics() {
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Payment Method</label>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" className="py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium">Cash</button>
-                <button type="button" className="py-2.5 rounded-lg border border-brand-100 text-slate-600 text-sm font-medium">M-Pesa</button>
+                {['Cash', 'M-Pesa'].map((method) => <button key={method} type="button" onClick={() => setPaymentMethod(method)} className={`py-2.5 rounded-lg text-sm font-medium ${paymentMethod === method ? 'bg-brand-500 text-white' : 'border border-brand-100 text-slate-600'}`}>{method}</button>)}
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">M-Pesa Reference Code</label>
               <input
+                disabled={paymentMethod !== 'M-Pesa'} value={repayment.reference} onChange={(e) => setRepayment({ ...repayment, reference: e.target.value })}
                 placeholder="E.G. QWE123RTY"
                 className="w-full px-3 py-2.5 rounded-lg border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
               />
@@ -153,6 +167,7 @@ export default function Analytics() {
             >
               Record Repayment
             </button>
+            {repaymentMessage && <p role="status" className="text-xs text-brand-700">{repaymentMessage}</p>}
           </form>
         </div>
       </div>

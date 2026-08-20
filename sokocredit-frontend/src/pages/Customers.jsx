@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { Search, Plus, ChevronLeft, ChevronDown } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import CustomerDetail from '../components/CustomerDetail';
@@ -7,13 +8,15 @@ import { selectCustomer, setSearchTerm } from '../features/customers/customersSl
 
 export default function Customers() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { list, selectedId, searchTerm } = useSelector((state) => state.customers);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
+  const [market, setMarket] = useState('All Markets');
 
-  const filtered = list.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = list.filter((c) =>
+    (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (market === 'All Markets' || c.market === market)
   );
 
   const selected = list.find((c) => c.id === selectedId);
@@ -36,10 +39,12 @@ export default function Customers() {
             className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-brand-100 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
           />
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-brand-100 bg-white text-sm text-slate-600 justify-center">
-          All Markets <ChevronDown size={14} />
-        </button>
-        <button className="flex items-center justify-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl px-4 py-2.5">
+        <label className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-brand-100 bg-white text-sm text-slate-600 justify-center">
+          <select aria-label="Market" value={market} onChange={(e) => setMarket(e.target.value)} className="bg-transparent outline-none">
+            <option>All Markets</option>{[...new Set(list.map((c) => c.market))].map((item) => <option key={item}>{item}</option>)}
+          </select><ChevronDown size={14} />
+        </label>
+        <button onClick={() => navigate('/customers/new')} className="flex items-center justify-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl px-4 py-2.5">
           <Plus size={16} /> New
         </button>
       </div>

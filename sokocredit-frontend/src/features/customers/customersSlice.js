@@ -15,8 +15,12 @@ const customersSlice = createSlice({
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
     },
+    addCustomer: (state, action) => {
+      state.list.unshift(action.payload);
+      state.selectedId = action.payload.id;
+    },
   },
 });
 
-export const { selectCustomer, setSearchTerm } = customersSlice.actions;
+export const { selectCustomer, setSearchTerm, addCustomer } = customersSlice.actions;
 export default customersSlice.reducer;

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -21,7 +22,7 @@ html, body, #root {
 
 body {
   font-family: var(--font-body);
-  background-color: #f6f7f5;
+  background-color: #f8f8fb;
   color: #16241a;
   -webkit-font-smoothing: antialiased;
 }
@@ -32,6 +33,36 @@ h1, h2, h3, h4, .font-display {
 
 button {
   cursor: pointer;
+}
+
+input, select, textarea {
+  font: inherit;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+/* Shared visual language for the signed-in workspace. */
+.app-surface {
+  background: #ffffff;
+  border: 1px solid #dcecd6;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(22 36 26 / 0.03);
+}
+
+.app-field {
+  border: 1px solid #b9d9af;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #334155;
+}
+
+.app-field:focus {
+  border-color: #67a852;
+  outline: 2px solid rgb(143 193 126 / 0.35);
+  outline-offset: 1px;
 }
 
 /* Hide scrollbar for horizontal card rails on mobile, keep it scrollable */

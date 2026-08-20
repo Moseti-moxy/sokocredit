@@ -1,7 +1,9 @@
 import { Phone, MapPin, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { formatKES } from '../utils/format';
+import { useNavigate } from 'react-router-dom';
 
 export default function CustomerDetail({ customer }) {
+  const navigate = useNavigate();
   if (!customer) {
     return (
       <div className="bg-white rounded-2xl border border-brand-100 p-8 text-center text-slate-400 text-sm">
@@ -26,12 +28,13 @@ export default function CustomerDetail({ customer }) {
               <p className="text-sm text-slate-500 truncate">{customer.business}</p>
             </div>
           </div>
-          <button
+          <a
+            href="tel:+254700000000"
             aria-label="Call customer"
             className="p-2.5 rounded-full bg-brand-50 text-brand-600 shrink-0"
           >
             <Phone size={16} />
-          </button>
+          </a>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
@@ -53,7 +56,7 @@ export default function CustomerDetail({ customer }) {
           </div>
         </div>
 
-        <button className="mt-5 w-full sm:w-auto bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-5 py-2.5 transition-colors">
+        <button onClick={() => navigate('/loans')} className="mt-5 w-full sm:w-auto bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl px-5 py-2.5 transition-colors">
           Issue Loan
         </button>
       </div>
