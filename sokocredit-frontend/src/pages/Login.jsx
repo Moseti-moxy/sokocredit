@@ -40,8 +40,8 @@ export default function Login() {
       {/* Hero image - hidden on mobile to keep the form the priority there */}
       <div className="hidden lg:block relative bg-brand-900">
         <img
-          src="https://images.unsplash.com/photo-1607013407627-6ea62c04b6f9?q=80&w=1200&auto=format&fit=crop"
-          alt=""
+          src="/market-traders.jpg"
+          alt="Market trader standing beside fresh produce"
           className="absolute inset-0 w-full h-full object-cover opacity-80"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-900/90 via-brand-900/20 to-transparent" />

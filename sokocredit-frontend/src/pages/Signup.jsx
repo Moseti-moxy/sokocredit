@@ -140,8 +140,14 @@ export default function Signup() {
           </div>
 
           {/* Info panel - stacks below the form on mobile/tablet */}
-          <div className="bg-brand-800 rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between order-first lg:order-last">
-            <div>
+          <div className="relative overflow-hidden bg-brand-800 rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between order-first lg:order-last">
+            <img
+              src="/market-growth.jpg"
+              alt="Market trader carrying bananas"
+              className="absolute inset-0 h-full w-full object-cover opacity-55"
+            />
+            <div className="absolute inset-0 bg-brand-900/75" />
+            <div className="relative">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white/10 rounded-full px-3 py-1.5 mb-5">
                 <ShieldCheck size={13} /> Trusted by 500+ institutions
               </span>
@@ -151,7 +157,7 @@ export default function Signup() {
               </p>
             </div>
 
-            <div className="mt-6 bg-white/10 rounded-xl p-4">
+            <div className="relative mt-6 bg-white/10 rounded-xl p-4">
               <p className="text-xs text-brand-100 mb-1">Portfolio Growth</p>
               <p className="font-display text-lg font-semibold mb-2">+12.5% this month</p>
               <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
