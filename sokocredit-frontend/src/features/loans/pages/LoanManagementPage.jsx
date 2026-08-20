@@ -1,48 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loans as seedLoans } from '../api/loansApi'
+import { loans as seedLoans, generateSchedule } from '../api/loansApi'
 import NewLoanForm from '../components/NewLoanForm'
 import LoanTable from '../components/LoanTable'
+import { DisbursementQueue, LoanDetail, PendingQueue } from '../components/LoanWorkflow'
 
-const LOANS_STORAGE_KEY = 'sokocredit-loans'
+const storageKey = 'sokocredit-loans'
+const savedLoans = () => { try { const data = JSON.parse(localStorage.getItem(storageKey)); return Array.isArray(data) ? data : seedLoans } catch { return seedLoans } }
 
 export default function LoanManagementPage() {
-  const [loans, setLoans] = useState(() => {
-    const savedLoans = localStorage.getItem(LOANS_STORAGE_KEY)
-
-    if (!savedLoans) return seedLoans
-
-    try {
-      const parsedLoans = JSON.parse(savedLoans)
-      return Array.isArray(parsedLoans) ? parsedLoans : seedLoans
-    } catch {
-      return seedLoans
-    }
-  })
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('All Status')
-  const [notice, setNotice] = useState('')
-
-  useEffect(() => {
-    localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(loans))
-  }, [loans])
-
-  const shownLoans = useMemo(() => loans.filter((loan) => {
-    const matchesSearch = loan.customer.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = status === 'All Status' || (status === 'Overdue' ? loan.status.includes('Overdue') : loan.status === status)
-    return matchesSearch && matchesStatus
-  }), [loans, search, status])
-
-  const createLoan = (form) => {
-    const application = { id: `L-${Date.now().toString().slice(-4)}`, customer: form.customer, initials: form.customer.split(' ').map((part) => part[0]).join('').slice(0, 2), business: 'New Application', amount: Number(form.amount), paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval' }
-    setLoans([application, ...loans])
-    setNotice(`Loan application for ${form.customer} created.`)
-  }
-
-  return <div className="min-h-screen w-full bg-white">
-    <header className="flex h-[84px] items-center border-b border-[#eee] px-5 md:px-[45px]"><a className="flex items-center gap-2 text-2xl font-bold text-[#347705] no-underline" href="#home"><svg aria-hidden="true" className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="9" /><path d="M8 15c.9-1.4 2.2-2 4-2s3.1.6 4 2M9.5 9.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0" /></svg>SokoCredit</a><nav className="mx-auto flex gap-4 md:gap-[38px]"><a className="px-0.5 pb-2.5 pt-7 text-sm text-[#474d47] no-underline" href="#home">Home</a><a className="px-0.5 pb-2.5 pt-7 text-sm text-[#474d47] no-underline" href="#customers">Customers</a><a className="border-b-2 border-[#347705] px-0.5 pb-2.5 pt-7 text-sm font-bold text-[#347705] no-underline" href="#loans">Loans</a><a className="px-0.5 pb-2.5 pt-7 text-sm text-[#474d47] no-underline" href="#analytics">Analytics</a></nav><button aria-label="Notifications" className="grid size-11 place-items-center border-0 bg-white text-[#347705]"><svg aria-hidden="true" className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></button></header>
-    <main className="px-[18px] py-7 md:px-[45px] md:py-[39px]"><section><h1 className="mb-2 text-[32px] font-bold tracking-[-.7px]">Loan Management</h1><p className="m-0 text-lg text-[#50574f]">Create and track active loans for market traders.</p></section>
-      {notice && <div className="mt-5 flex justify-between border border-[#bde0ad] bg-[#eff9e8] px-4 py-3 text-base text-[#286904]">{notice}<button className="border-0 bg-transparent text-xl text-[#286904]" onClick={() => setNotice('')}>×</button></div>}
-      <section className="mt-8 grid grid-cols-1 gap-[27px] lg:grid-cols-[340px_1fr]"><NewLoanForm onCreate={createLoan} /><section className="min-w-0"><div className="mb-4 mt-0.5 flex flex-col items-start gap-3.5 md:flex-row md:items-center md:justify-between"><h2 className="m-0 text-2xl font-bold">Active Tracking</h2><div className="flex w-full gap-3 md:w-auto"><label className="flex h-11 flex-1 items-center border border-[#bdc8b6] px-3 text-lg text-[#4f5b4d] md:flex-none">⌕<input className="w-full border-0 pl-2 text-base outline-none md:w-[200px]" placeholder="Search customer..." value={search} onChange={(event) => setSearch(event.target.value)} /></label><select className="h-11 border border-[#bdc8b6] bg-white px-3 text-base text-[#56606a] outline-[#508d27]" value={status} onChange={(event) => setStatus(event.target.value)}><option>All Status</option><option>On Track</option><option>Overdue</option><option>Due Tomorrow</option><option>Pending</option></select></div></div><LoanTable loans={shownLoans} /></section></section>
-    </main>
-  </div>
+  const [loans, setLoans] = useState(savedLoans); const [search, setSearch] = useState(''); const [status, setStatus] = useState('All Status'); const [notice, setNotice] = useState(''); const [view, setView] = useState('portfolio'); const [selected, setSelected] = useState(null)
+  const role = 'loan_officer' // Replace with Dev 4's auth role hook when available.
+  useEffect(() => localStorage.setItem(storageKey, JSON.stringify(loans)), [loans])
+  const shown = useMemo(() => loans.filter((loan) => loan.customer.toLowerCase().includes(search.toLowerCase()) && (status === 'All Status' || (status === 'Overdue' ? loan.status.includes('Overdue') : loan.status === status))), [loans, search, status])
+  const update = (id, changes) => setLoans((items) => items.map((loan) => loan.id === id ? { ...loan, ...changes } : loan))
+  const create = (form) => { const loan = { id: `L-${Date.now().toString().slice(-5)}`, customerId: form.customerId, customer: form.customer, initials: form.initials, business: form.business, amount: Number(form.amount), interestRate: Number(form.rate), duration: Number(form.duration), frequency: form.frequency, paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval', appliedAt: new Date().toISOString().slice(0, 10), schedule: generateSchedule({ amount: form.amount, interestRate: form.rate, duration: form.duration, frequency: form.frequency }) }; setLoans((items) => [loan, ...items]); setView('pending'); setNotice(`Application for ${form.customer} submitted for review.`) }
+  const approve = (loan, conditions) => { if (window.confirm(`Approve ${loan.id}?`)) { update(loan.id, { status: 'Approved', approvedAt: new Date().toISOString().slice(0, 10), conditions }); setNotice(`${loan.id} approved and ready for disbursement.`) } }
+  const reject = (loan, reason, notes) => { update(loan.id, { status: 'Rejected', rejectedAt: new Date().toISOString().slice(0, 10), rejectionReason: reason, rejectionNotes: notes }); setNotice(`${loan.id} was rejected.`) }
+  const disburse = (loan, details) => { if (window.confirm(`Record ${details.method} disbursement for ${loan.id}?`)) { update(loan.id, { status: 'Repaying', disbursedAt: details.date, disbursement: details, due: loan.schedule?.[0]?.dueDate || 'Scheduled' }); setNotice(`${loan.id} disbursed via ${details.method}.`) } }
+  const tabs = [['portfolio', 'Portfolio'], ['pending', `Pending (${loans.filter((loan) => loan.status === 'Pending').length})`], ['disburse', 'Disbursements']]
+  return <div className="min-h-screen w-full bg-white"><header className="flex h-[84px] items-center border-b border-[#eee] px-5 md:px-[45px]"><a className="text-2xl font-bold text-[#347705] no-underline" href="#home">SokoCredit</a><nav className="mx-auto flex gap-4 md:gap-[38px]"><a className="px-0.5 pb-2.5 pt-7 text-sm text-[#474d47] no-underline" href="#customers">Customers</a><a className="border-b-2 border-[#347705] px-0.5 pb-2.5 pt-7 text-sm font-bold text-[#347705] no-underline" href="#loans">Loans</a></nav></header><main className="px-[18px] py-7 md:px-[45px] md:py-[39px]"><section><h1 className="mb-2 text-[32px] font-bold tracking-[-.7px]">Loan Management</h1><p className="m-0 text-lg text-[#50574f]">Applications, approvals, disbursements and repayment schedules.</p></section>{notice && <div className="mt-5 flex justify-between border border-[#bde0ad] bg-[#eff9e8] px-4 py-3 text-base text-[#286904]" role="status">{notice}<button className="border-0 bg-transparent text-xl text-[#286904]" onClick={() => setNotice('')}>×</button></div>}<div className="mt-7 flex flex-wrap gap-2 border-b border-[#e9ebe5]">{tabs.map(([key, label]) => <button key={key} onClick={() => setView(key)} className={`border-b-2 px-3 py-3 text-sm font-bold ${view === key ? 'border-[#397d09] text-[#397d09]' : 'border-transparent text-[#5c635a]'}`}>{label}</button>)}</div>{view === 'portfolio' && <section className="mt-6 grid grid-cols-1 gap-[27px] lg:grid-cols-[340px_1fr]"><NewLoanForm onCreate={create} /><section className="min-w-0"><div className="mb-4 flex flex-col items-start gap-3.5 md:flex-row md:items-center md:justify-between"><h2 className="m-0 text-2xl font-bold">Loan portfolio</h2><div className="flex w-full gap-3 md:w-auto"><label className="flex h-11 flex-1 items-center border border-[#bdc8b6] px-3 text-lg">⌕<input className="w-full border-0 pl-2 text-base outline-none md:w-[200px]" placeholder="Search customer..." value={search} onChange={(event) => setSearch(event.target.value)} /></label><select className="h-11 border border-[#bdc8b6] bg-white px-3 text-base" value={status} onChange={(event) => setStatus(event.target.value)}><option>All Status</option><option>Repaying</option><option>Overdue</option><option>Due Tomorrow</option><option>Pending</option><option>Approved</option></select></div></div><LoanTable loans={shown} onSelect={setSelected} /></section></section>}{view === 'pending' && <section className="mt-6 max-w-3xl"><h2>Application review queue</h2><PendingQueue loans={loans} role={role} onApprove={approve} onReject={reject} /></section>}{view === 'disburse' && <section className="mt-6 max-w-3xl"><h2>Approved, awaiting disbursement</h2><DisbursementQueue loans={loans} onDisburse={disburse} /></section>}{selected && <LoanDetail loan={selected} onClose={() => setSelected(null)} />}</main></div>
 }
