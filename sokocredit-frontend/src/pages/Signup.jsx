@@ -1,173 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Landmark, Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
+import { Building2, Eye, EyeOff, ShieldCheck, UserRoundPlus } from 'lucide-react';
 import { signupUser, clearAuthError } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
 
+const initialForm = { name: '', phone: '+254', nationalId: '', kraPin: '', market: 'Wakulima Market (Marikiti)', stall: '', commodity: 'Vegetables & Fruits (Mama Mboga)', yearsOperating: '3', dailyTurnover: '', dailyProfit: '', chama: 'No Chama / Individual Borrower', nextOfKin: '', relationship: 'Spouse', nextOfKinPhone: '+254', pin: '' };
+const input = 'app-field h-11 w-full px-3 text-sm';
+function Field({ label, required, children }) { return <label className="grid gap-2 text-sm font-medium text-slate-700">{label}{required && ' *'}{children}</label>; }
+function Section({ title, icon: Icon, children }) { return <section className="border-b border-brand-100 py-5 first:pt-0 last:border-0"><h2 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><Icon size={16} className="text-brand-500" />{title}</h2><div className="grid gap-4 sm:grid-cols-2">{children}</div></section>; }
+
 export default function Signup() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [customerId, setCustomerId] = useState('');
-  const [pin, setPin] = useState('');
-
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { isAuthenticated, status, error } = useAuth();
-  const isLoading = status === 'loading';
-
-  useEffect(() => {
-    if (isAuthenticated) navigate('/', { replace: true });
-  }, [isAuthenticated, navigate]);
-
-  useEffect(() => {
-    return () => dispatch(clearAuthError());
-  }, [dispatch]);
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    dispatch(signupUser({ fullName, customerId, pin }));
-  }
-
-  return (
-    <div className="min-h-screen bg-brand-50/40 flex flex-col">
-      <header className="flex items-center justify-between px-6 sm:px-10 h-16">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white">
-            <Landmark size={18} />
-          </div>
-          <span className="font-display font-semibold text-lg text-brand-700">SokoCredit</span>
-        </div>
-        <a href="#" className="text-sm text-slate-500 hover:text-brand-700">Help</a>
-      </header>
-
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8">
-        <div className="w-full max-w-4xl grid lg:grid-cols-2 gap-8 items-stretch">
-          {/* Form card */}
-          <div className="bg-white rounded-2xl border border-brand-100 p-6 sm:p-8">
-            <h1 className="font-display text-xl font-semibold text-slate-900 mb-1">Create customer account</h1>
-            <p className="text-sm text-slate-500 mb-5">Use your customer ID and PIN to access your loan information.</p>
-
-            <div className="h-1.5 rounded-full bg-brand-50 mb-6 overflow-hidden">
-              <div className="h-full w-1/3 bg-brand-500 rounded-full" />
-            </div>
-
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {error && (
-                <div className="rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm px-3 py-2.5">
-                  {error}
-                </div>
-              )}
-              <div>
-                <label htmlFor="fullName" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Full Name</label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  autoComplete="name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Jane Doe"
-                  required
-                  className="w-full px-3 py-3 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-                />
-              </div>
-              <div>
-                <label htmlFor="customerId" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Customer ID</label>
-                <input
-                  id="customerId"
-                  name="customerId"
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                  placeholder="e.g. SC-2026-1001"
-                  required
-                  className="w-full px-3 py-3 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-                />
-              </div>
-              <div>
-                <label htmlFor="pin" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Create PIN</label>
-                <div className="relative">
-                  <input
-                    id="pin"
-                    name="pin"
-                    type={showPassword ? 'text' : 'password'}
-                    inputMode="numeric"
-                    autoComplete="new-password"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    placeholder="4–8 digits"
-                    required
-                    minLength={4}
-                    maxLength={8}
-                    pattern="[0-9]{4,8}"
-                    className="w-full px-3 py-3 pr-10 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Link
-                  to="/login"
-                  className="flex-1 sm:flex-none flex items-center justify-center px-5 py-3 rounded-xl border border-brand-200 text-slate-600 font-medium text-sm"
-                >
-                  ← Back
-                </Link>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-xl py-3 text-sm transition-colors"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" /> Creating…
-                    </>
-                  ) : (
-                    'Continue →'
-                  )}
-                </button>
-              </div>
-            </form>
-
-            <p className="text-center text-sm text-slate-500 mt-5">
-              Already have an account? <Link to="/login" className="text-brand-600 font-medium hover:underline">Log in</Link>
-            </p>
-          </div>
-
-          {/* Info panel - stacks below the form on mobile/tablet */}
-          <div className="relative overflow-hidden bg-brand-800 rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between order-first lg:order-last">
-            <img
-              src="/market-growth.jpg"
-              alt="Market trader carrying bananas"
-              className="absolute inset-0 h-full w-full object-cover opacity-55"
-            />
-            <div className="absolute inset-0 bg-brand-900/75" />
-            <div className="relative">
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white/10 rounded-full px-3 py-1.5 mb-5">
-                <ShieldCheck size={13} /> Trusted by 500+ institutions
-              </span>
-              <h2 className="font-display text-2xl font-semibold mb-2">Empowering Local Markets</h2>
-              <p className="text-brand-100 text-sm">
-                Secure, transparent, and built for the field. Manage your portfolio with confidence.
-              </p>
-            </div>
-
-            <div className="relative mt-6 bg-white/10 rounded-xl p-4">
-              <p className="text-xs text-brand-100 mb-1">Portfolio Growth</p>
-              <p className="font-display text-lg font-semibold mb-2">+12.5% this month</p>
-              <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
-                <div className="h-full w-3/4 bg-white rounded-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+  const [form, setForm] = useState(initialForm); const [showPin, setShowPin] = useState(false); const [formError, setFormError] = useState('');
+  const dispatch = useDispatch(); const navigate = useNavigate(); const { isAuthenticated, status, error } = useAuth(); const isLoading = status === 'loading';
+  useEffect(() => { if (isAuthenticated) navigate('/', { replace: true }); }, [isAuthenticated, navigate]);
+  useEffect(() => () => dispatch(clearAuthError()), [dispatch]);
+  const update = (key, value) => { setFormError(''); setForm((current) => ({ ...current, [key]: value })); };
+  const submit = (event) => {
+    event.preventDefault();
+    const nationalId = form.nationalId.replace(/\D/g, '');
+    if (!form.name.trim() || form.phone.replace(/\D/g, '').length < 10 || !/^\d{7,8}$/.test(nationalId) || !form.stall.trim() || Number(form.dailyTurnover) <= 0 || !/^\d{4,8}$/.test(form.pin)) return setFormError('Complete the required trader details, enter a valid 7–8 digit Kenyan National ID number, and choose a 4–8 digit PIN.');
+    dispatch(signupUser({ fullName: form.name.trim(), customerId: nationalId, pin: form.pin, profile: { phone: form.phone, nationalId, kraPin: form.kraPin.trim(), market: form.market, location: form.stall.trim(), business: form.commodity, yearsOperating: Number(form.yearsOperating), dailyTurnover: Number(form.dailyTurnover), dailyProfit: Number(form.dailyProfit || 0), chama: form.chama, nextOfKin: form.nextOfKin.trim(), relationship: form.relationship, nextOfKinPhone: form.nextOfKinPhone } }));
+  };
+  return <div className="min-h-screen bg-brand-50/40 py-6 sm:py-10"><main className="mx-auto max-w-5xl px-4 sm:px-6"><div className="overflow-hidden rounded-3xl border border-brand-100 bg-white shadow-sm"><div className="flex items-center justify-between bg-brand-600 px-5 py-4 text-white sm:px-7"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-white/15"><UserRoundPlus size={21} /></div><div><h1 className="font-display text-lg font-semibold">Register New Trader / Mama Mboga</h1><p className="text-xs text-brand-100">Create your SokoCredit customer account</p></div></div><Link to="/login" aria-label="Return to customer login" className="grid size-9 place-items-center rounded-full bg-brand-700/60 text-lg hover:bg-brand-700">×</Link></div><form onSubmit={submit} noValidate className="p-5 sm:p-7"><Section title="1. Personal & contact information" icon={UserRoundPlus}><Field label="Full Legal Name" required><input autoFocus value={form.name} onChange={(event) => update('name', event.target.value)} className={input} placeholder="e.g. Agnes Muthoni Kariuki" /></Field><Field label="M-Pesa Phone Number" required><input type="tel" value={form.phone} onChange={(event) => update('phone', event.target.value)} className={input} placeholder="+2547..." /></Field><Field label="Kenyan National ID Number" required><input inputMode="numeric" autoComplete="off" maxLength="8" value={form.nationalId} onChange={(event) => update('nationalId', event.target.value.replace(/\D/g, ''))} className={input} placeholder="e.g. 29481029" /></Field><Field label="KRA PIN (Optional)"><input value={form.kraPin} onChange={(event) => update('kraPin', event.target.value)} className={input} placeholder="e.g. A008920194M" /></Field></Section><Section title="2. Market location & trading stall" icon={Building2}><Field label="Market Location" required><select value={form.market} onChange={(event) => update('market', event.target.value)} className={input}><option>Wakulima Market (Marikiti)</option><option>Gikomba Market</option><option>Muthurwa Market</option><option>City Park Market</option></select></Field><Field label="Stall / Kiosk Number" required><input value={form.stall} onChange={(event) => update('stall', event.target.value)} className={input} placeholder="e.g. Shed B-42, Fresh Produce Line" /></Field><Field label="Business Commodity Type"><select value={form.commodity} onChange={(event) => update('commodity', event.target.value)} className={input}><option>Vegetables & Fruits (Mama Mboga)</option><option>Grains & Cereals</option><option>Textiles & Fabrics</option><option>Hardware & Household Goods</option><option>Other Retail Trade</option></select></Field><Field label="Years Operating at this Market"><input type="number" min="0" max="70" value={form.yearsOperating} onChange={(event) => update('yearsOperating', event.target.value)} className={input} /></Field><Field label="Est. Daily Cash Turnover (KSh)" required><input type="number" min="1" value={form.dailyTurnover} onChange={(event) => update('dailyTurnover', event.target.value)} className={input} placeholder="12000" /></Field><Field label="Est. Daily Net Profit (KSh)"><input type="number" min="0" value={form.dailyProfit} onChange={(event) => update('dailyProfit', event.target.value)} className={input} placeholder="3200" /></Field></Section><Section title="3. Chama affiliation & next of kin" icon={ShieldCheck}><Field label="Market Chama Group (Joint Liability)"><select value={form.chama} onChange={(event) => update('chama', event.target.value)} className={input}><option>No Chama / Individual Borrower</option><option>Wakulima Traders Chama</option><option>Gikomba Market Chama</option></select></Field><Field label="Next of Kin Full Name"><input value={form.nextOfKin} onChange={(event) => update('nextOfKin', event.target.value)} className={input} placeholder="e.g. Samuel Kariuki" /></Field><Field label="Relationship"><select value={form.relationship} onChange={(event) => update('relationship', event.target.value)} className={input}><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Child</option></select></Field><Field label="Next of Kin Phone"><input type="tel" value={form.nextOfKinPhone} onChange={(event) => update('nextOfKinPhone', event.target.value)} className={input} placeholder="+2547..." /></Field></Section><Section title="4. Create your sign-in details" icon={ShieldCheck}><p className="sm:col-span-2 -mt-1 text-sm text-slate-500">Your Kenyan National ID number is your customer ID and sign-in ID.</p><Field label="Create PIN" required><div className="relative"><input type={showPin ? 'text' : 'password'} inputMode="numeric" value={form.pin} onChange={(event) => update('pin', event.target.value)} className={`${input} pr-10`} placeholder="4–8 digits" maxLength="8" /><button type="button" onClick={() => setShowPin((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-label={showPin ? 'Hide PIN' : 'Show PIN'}>{showPin ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></Field></Section>{(formError || error) && <p role="alert" className="mt-5 text-sm text-red-600">{formError || error}</p>}<div className="mt-6 flex flex-col-reverse gap-3 border-t border-brand-100 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-slate-500">Already registered? <Link to="/login" className="font-medium text-brand-600 hover:underline">Sign in</Link></p><button type="submit" disabled={isLoading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><ShieldCheck size={17} /> {isLoading ? 'Creating account…' : 'Save & Onboard Trader'}</button></div></form></div></main></div>;
 }

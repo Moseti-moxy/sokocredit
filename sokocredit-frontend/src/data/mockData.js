@@ -50,6 +50,8 @@ export const customers = [
     defaultRate: 0,
     creditScore: 85,
     lastRepayment: 'Today',
+    chama: 'Gikomba Market Chama',
+    chamaRole: 'chairperson',
     paymentHistory: [
       { id: 1, type: 'Repayment - Daily Installment', method: 'M-Pesa', date: 'Today, 09:45 AM', amount: 500, balanceAfter: 4500, direction: 'in' },
       { id: 2, type: 'Repayment - Daily Installment', method: 'Cash (Agent)', date: 'Yesterday, 14:20 PM', amount: 500, balanceAfter: 5000, direction: 'in' },
@@ -68,6 +70,8 @@ export const customers = [
     defaultRate: 0,
     creditScore: 72,
     lastRepayment: 'Yesterday',
+    chama: 'Muthurwa Women Traders Group',
+    chamaRole: 'chairperson',
     paymentHistory: [],
   },
   {
@@ -82,6 +86,7 @@ export const customers = [
     defaultRate: 11,
     creditScore: 54,
     lastRepayment: '5 days ago',
+    chama: 'No Chama / Individual Borrower',
     paymentHistory: [],
   },
 ];

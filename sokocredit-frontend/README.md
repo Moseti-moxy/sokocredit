@@ -47,12 +47,33 @@ src/
   else (which layout renders) is pure CSS via Tailwind breakpoints, so there's
   no JS-based screen-width detection to keep in sync.
 
-## Next steps for the team
+## Frontend-only demo capabilities
 
-- Replace `src/data/mockData.js` reads with real API calls (RTK Query is a
-  natural fit given Redux Toolkit is already in place) once the Flask
-  endpoints are ready.
-- Login/Signup currently have no auth wiring — hook up JWT storage + protected
-  routes once the backend auth endpoints exist.
-- `npm run build` currently warns about one JS chunk being ~690kB; worth
-  code-splitting routes with `React.lazy` once more pages/libraries are added.
+- Customer sign-up validates KYC, market, next-of-kin, customer ID, and PIN fields.
+- Customer loan requests include a transparent estimated eligibility amount and
+  remain visible through pending, approved, rejected, and repayment stages.
+- Admins, agents, and loan officers receive persistent in-app notification alerts.
+- Staff can review applications, record simulated M-Pesa/cash repayments,
+  manage schedules, and record reminders.
+- Analytics, audit views, and role-restricted navigation are available with the
+  project’s local mock data.
+
+## Before production
+
+This project deliberately has no backend yet. Browser storage, demo credentials,
+M-Pesa references, notifications, and eligibility calculations are simulations;
+they are not secure or shared between devices. Before handling real customers or
+money, add server-side authentication and authorization, a database, encrypted
+secrets, M-Pesa API verification, SMS/email delivery, audit logging, rate
+limiting, backups, and server-side validation.
+
+## Deployment checklist
+
+1. Set `VITE_USE_MOCK_AUTH=false` and configure the production API base URL.
+2. Run `npm ci`, `npm run lint`, `npm test`, and `npm run build` in CI.
+3. Deploy the generated `dist/` directory to a static host with SPA route
+   fallback enabled.
+4. Keep all API keys and payment credentials only on the server—never in Vite
+   variables exposed to the browser.
+5. Add error monitoring and test customer, staff, admin, and payment flows in
+   a staging environment before release.

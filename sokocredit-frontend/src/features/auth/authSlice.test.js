@@ -23,7 +23,7 @@ describe('authSlice', () => {
   it('login success: sets token, user, and role, and clears any error', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-8492', password: 'password123', remember: true })
+      loginUser({ identifier: 'AGT-8492', password: '1234', remember: true, portal: 'staff' })
     );
 
     const state = store.getState().auth;
@@ -37,7 +37,7 @@ describe('authSlice', () => {
   it('login failure: wrong password sets an error and leaves the user signed out', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-8492', password: 'wrong-password', remember: true })
+      loginUser({ identifier: 'AGT-8492', password: 'wrong-password', remember: true, portal: 'staff' })
     );
 
     const state = store.getState().auth;
@@ -50,7 +50,7 @@ describe('authSlice', () => {
   it('login failure: unknown identifier is also rejected', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'NOBODY-0000', password: 'password123', remember: true })
+      loginUser({ identifier: 'NOBODY-0000', password: '1234', remember: true, portal: 'staff' })
     );
 
     const state = store.getState().auth;
@@ -61,7 +61,7 @@ describe('authSlice', () => {
   it('token storage: remember=true persists to localStorage, not sessionStorage', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-8492', password: 'password123', remember: true })
+      loginUser({ identifier: 'AGT-8492', password: '1234', remember: true, portal: 'staff' })
     );
 
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeTruthy();
@@ -71,7 +71,7 @@ describe('authSlice', () => {
   it('token storage: remember=false persists to sessionStorage, not localStorage', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-8492', password: 'password123', remember: false })
+      loginUser({ identifier: 'AGT-8492', password: '1234', remember: false, portal: 'staff' })
     );
 
     expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeTruthy();
@@ -81,7 +81,7 @@ describe('authSlice', () => {
   it('logout clears state and both storage locations', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'ADM-1001', password: 'admin123', remember: true })
+      loginUser({ identifier: 'ADM-1001', password: '1001', remember: true, portal: 'staff' })
     );
     expect(store.getState().auth.token).toBeTruthy();
 

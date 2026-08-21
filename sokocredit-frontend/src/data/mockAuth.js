@@ -23,27 +23,28 @@ export const MOCK_USERS = [
   },
 ];
 
-const STAFF_STORAGE_KEY = 'sokocredit.loan-officers';
+const STAFF_STORAGE_KEY = 'sokocredit.agents';
+const LEGACY_STAFF_STORAGE_KEY = 'sokocredit.loan-officers';
 const CUSTOMER_STORAGE_KEY = 'sokocredit.customers';
 
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
 
-export function getLoanOfficers() { return readStored(STAFF_STORAGE_KEY); }
+export function getLoanOfficers() { return [...readStored(LEGACY_STAFF_STORAGE_KEY), ...readStored(STAFF_STORAGE_KEY)].map((agent) => ({ ...agent, role: 'agent' })); }
 
 export function addLoanOfficer({ name, email, pin }) {
   const officers = getLoanOfficers();
   if (officers.some((officer) => officer.email.toLowerCase() === email.toLowerCase())) throw new Error('That email is already in use.');
-  const officer = { id: `LO-${Date.now().toString().slice(-6)}`, identifier: email, name, email, password: pin, role: 'loan_officer', market: 'Assigned by admin' };
+  const officer = { id: `AGT-${Date.now().toString().slice(-6)}`, identifier: email, name, email, password: pin, role: 'agent', market: 'Assigned by admin' };
   localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify([...officers, officer]));
   return officer;
 }
 
-export function addCustomer({ name, customerId, pin }) {
+export function addCustomer({ name, customerId, pin, ...profile }) {
   const customers = readStored(CUSTOMER_STORAGE_KEY);
   if (customers.some((customer) => customer.identifier.toLowerCase() === customerId.toLowerCase())) throw new Error('That customer ID is already in use.');
-  const customer = { id: customerId, identifier: customerId, name, password: pin, role: 'customer', market: 'Customer portal' };
+  const customer = { id: customerId, identifier: customerId, name, password: pin, role: 'customer', market: 'Customer portal', ...profile };
   localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify([...customers, customer]));
   return customer;
 }

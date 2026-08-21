@@ -13,8 +13,8 @@ function writeAll(notifications) {
   window.dispatchEvent(new Event('sokocredit:notifications'));
 }
 
-export function getNotifications(role) {
-  return readAll().filter((notification) => notification.roles.includes(role));
+export function getNotifications(role, customerId) {
+  return readAll().filter((notification) => notification.roles.includes(role) && (!notification.customerId || notification.customerId === customerId));
 }
 
 export function createLoanRequestNotifications({ customer, amount, purpose, loanId }) {
@@ -27,6 +27,12 @@ export function createLoanRequestNotifications({ customer, amount, purpose, loan
     createdAt: new Date().toISOString(),
     readBy: [],
   };
+  writeAll([notification, ...readAll()].slice(0, 100));
+}
+
+export function createCustomerNotification({ customerId, title, message, loanId }) {
+  if (!customerId) return;
+  const notification = { id: `NTF-${Date.now()}`, roles: ['customer'], customerId, title, message, loanId, createdAt: new Date().toISOString(), readBy: [] };
   writeAll([notification, ...readAll()].slice(0, 100));
 }
 

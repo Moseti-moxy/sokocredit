@@ -64,7 +64,7 @@ export default function Login({ portal = 'customer' }) {
           </div>
 
           <h1 className="font-display text-2xl font-semibold text-slate-900 mb-1">{portal === 'staff' ? 'Staff sign in' : 'Customer sign in'}</h1>
-          <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Loan officers and agents sign in with their email and PIN. Administrators use the same secure staff portal.' : 'Use your Customer ID and PIN to check your SokoCredit account.'}</p>
+          <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Agents sign in with their email and PIN. Administrators use the same secure staff portal.' : 'Use your Kenyan National ID number and PIN to check your SokoCredit account.'}</p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
@@ -73,7 +73,7 @@ export default function Login({ portal = 'customer' }) {
               </div>
             )}
             <div>
-              <label htmlFor="identifier" className="block text-xs font-medium text-slate-500 mb-1.5">{portal === 'staff' ? 'Email' : 'Customer ID'}</label>
+              <label htmlFor="identifier" className="block text-xs font-medium text-slate-500 mb-1.5">{portal === 'staff' ? 'Email' : 'Kenyan National ID Number'}</label>
               <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -81,8 +81,10 @@ export default function Login({ portal = 'customer' }) {
                   name="identifier"
                   autoComplete="username"
                   value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder={portal === 'staff' ? 'name@sokocredit.co.ke' : 'e.g. SC-2026-1001'}
+                  onChange={(e) => setIdentifier(portal === 'staff' ? e.target.value : e.target.value.replace(/\D/g, ''))}
+                  inputMode={portal === 'staff' ? undefined : 'numeric'}
+                  maxLength={portal === 'staff' ? undefined : 8}
+                  placeholder={portal === 'staff' ? 'name@sokocredit.co.ke' : 'e.g. 29481029'}
                   required
                   className="w-full pl-9 pr-3 py-3 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
@@ -160,7 +162,7 @@ export default function Login({ portal = 'customer' }) {
             {portal === 'staff' ? <>Customer? <Link to="/login" className="text-brand-600 font-medium hover:underline">Go to customer login</Link></> : <>New customer? <Link to="/signup" className="text-brand-600 font-medium hover:underline">Create your account</Link></>}
           </p>
           <p className="text-center text-sm text-slate-500 mt-2">
-            {portal === 'staff' ? 'Staff accounts are created by an administrator.' : <Link to="/staff/login" className="text-brand-600 font-medium hover:underline">Agent, loan officer, or administrator? Use staff login</Link>}
+            {portal === 'staff' ? 'Agent accounts are created by an administrator.' : <Link to="/staff/login" className="text-brand-600 font-medium hover:underline">Agent or administrator? Use staff login</Link>}
           </p>
         </div>
       </div>
