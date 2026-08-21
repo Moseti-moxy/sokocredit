@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiClient } from '../../api/client';
-import { findMockUser } from '../../data/mockAuth';
+import { addCustomer, findMockUser } from '../../data/mockAuth';
 
 export const AUTH_STORAGE_KEY = 'sokocredit.auth';
 
@@ -53,10 +53,13 @@ function clearPersistedAuth() {
 
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async ({ identifier, password, remember = true }, { rejectWithValue }) => {
+  async ({ identifier, password, remember = true, portal = 'customer' }, { rejectWithValue }) => {
     if (USE_MOCK_AUTH) {
       const user = findMockUser(identifier, password);
-      if (!user) return rejectWithValue('Invalid Agent ID/email or password.');
+      if (!user) return rejectWithValue('Invalid sign-in details.');
+      const isCustomer = user.role === 'customer';
+      if (portal === 'customer' && !isCustomer) return rejectWithValue('Please use the staff login for this account.');
+      if (portal === 'staff' && isCustomer) return rejectWithValue('Please use the customer login for this account.');
       const token = `mock-jwt.${user.id}.${Date.now()}`;
       return { token, user, remember };
     }
@@ -71,17 +74,15 @@ export const loginUser = createAsyncThunk(
 
 export const signupUser = createAsyncThunk(
   'auth/signup',
-  async ({ fullName, email, password }, { rejectWithValue }) => {
+  async ({ fullName, email, password, customerId, pin }, { rejectWithValue }) => {
     if (USE_MOCK_AUTH) {
-      const user = {
-        id: `AGT-${Math.floor(1000 + Math.random() * 9000)}`,
-        name: fullName,
-        email,
-        role: 'agent',
-        market: 'Unassigned',
-      };
-      const token = `mock-jwt.${user.id}.${Date.now()}`;
-      return { token, user };
+      try {
+        const user = customerId ? addCustomer({ name: fullName, customerId, pin }) : null;
+        if (!user) return rejectWithValue('Only customers can create an account.');
+        const safeUser = { ...user };
+        delete safeUser.password;
+        return { token: `mock-jwt.${user.id}.${Date.now()}`, user: safeUser };
+      } catch (err) { return rejectWithValue(err.message); }
     }
     try {
       const { data } = await apiClient.post('/auth/signup', { fullName, email, password });

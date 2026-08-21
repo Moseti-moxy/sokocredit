@@ -8,8 +8,8 @@ import { useAuth } from '../hooks/useAuth';
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [pin, setPin] = useState('');
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ export default function Signup() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    dispatch(signupUser({ fullName, email, password }));
+    dispatch(signupUser({ fullName, customerId, pin }));
   }
 
   return (
@@ -45,8 +45,8 @@ export default function Signup() {
         <div className="w-full max-w-4xl grid lg:grid-cols-2 gap-8 items-stretch">
           {/* Form card */}
           <div className="bg-white rounded-2xl border border-brand-100 p-6 sm:p-8">
-            <h1 className="font-display text-xl font-semibold text-slate-900 mb-1">Create your account</h1>
-            <p className="text-sm text-slate-500 mb-5">Join SokoCredit to manage microfinance operations efficiently.</p>
+            <h1 className="font-display text-xl font-semibold text-slate-900 mb-1">Create customer account</h1>
+            <p className="text-sm text-slate-500 mb-5">Use your customer ID and PIN to access your loan information.</p>
 
             <div className="h-1.5 rounded-full bg-brand-50 mb-6 overflow-hidden">
               <div className="h-full w-1/3 bg-brand-500 rounded-full" />
@@ -72,32 +72,33 @@ export default function Signup() {
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Business Email</label>
+                <label htmlFor="customerId" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Customer ID</label>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jane@organization.com"
+                  id="customerId"
+                  name="customerId"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  placeholder="e.g. SC-2026-1001"
                   required
                   className="w-full px-3 py-3 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Password</label>
+                <label htmlFor="pin" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Create PIN</label>
                 <div className="relative">
                   <input
-                    id="password"
-                    name="password"
+                    id="pin"
+                    name="pin"
                     type={showPassword ? 'text' : 'password'}
+                    inputMode="numeric"
                     autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    placeholder="4–8 digits"
                     required
-                    minLength={8}
+                    minLength={4}
+                    maxLength={8}
+                    pattern="[0-9]{4,8}"
                     className="w-full px-3 py-3 pr-10 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                   />
                   <button

@@ -3,9 +3,12 @@ import { MoreHorizontal } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { openNav } from '../features/ui/uiSlice';
 import { mobileTabItems } from './navConfig';
+import { useAuth } from '../hooks/useAuth';
 
 export default function MobileTabBar() {
   const dispatch = useDispatch();
+  const { role } = useAuth();
+  const visibleItems = mobileTabItems.filter((item) => !item.roles || item.roles.includes(role));
 
   return (
     <nav
@@ -13,7 +16,7 @@ export default function MobileTabBar() {
       aria-label="Primary"
     >
       <div className="grid grid-cols-5 h-16">
-        {mobileTabItems.map(({ to, label, icon: Icon, end }) => (
+        {visibleItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
