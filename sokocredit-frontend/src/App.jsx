@@ -15,6 +15,7 @@ const AuditLog = lazy(() => import('./pages/AuditLog'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
+const CustomerSettings = lazy(() => import('./pages/CustomerSettings'));
 const LoanOfficerDashboard = lazy(() => import('./pages/LoanOfficerDashboard'));
 const LoanOfficers = lazy(() => import('./pages/LoanOfficers'));
 const Chamas = lazy(() => import('./pages/Chamas'));
@@ -64,6 +65,7 @@ export default function App() {
         {/* Role-specific communication pages: links and routes are both scoped. */}
         <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
           <Route path="/messages" element={<CustomerMessages />} />
+          <Route path="/customer-settings" element={<CustomerSettings />} />
         </Route>
         <Route element={<ProtectedRoute allowedRoles={['agent']} />}>
           <Route path="/customer-support" element={<AgentSupportInbox />} />

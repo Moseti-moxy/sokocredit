@@ -1,12 +1,9 @@
 // Multi-language Support Configuration
-// Support for English, Swahili, and local languages
+// Support for English and Swahili only
 
 export const SUPPORTED_LANGUAGES = {
   en: { name: 'English', nativeName: 'English', flag: '🇬🇧' },
   sw: { name: 'Swahili', nativeName: 'Kiswahili', flag: '🇰🇪' },
-  luo: { name: 'Luo', nativeName: 'Dholuo', flag: '🇰🇪' },
-  kikuyu: { name: 'Kikuyu', nativeName: 'Gikuyu', flag: '🇰🇪' },
-  kamba: { name: 'Kamba', nativeName: 'Kikamba', flag: '🇰🇪' },
 };
 
 export const translations = {
@@ -93,7 +90,8 @@ export const translations = {
 };
 
 export const getCurrentLanguage = () => {
-  return localStorage.getItem('sokocredit.language') || 'en';
+  const stored = localStorage.getItem('sokocredit.language');
+  return SUPPORTED_LANGUAGES[stored] ? stored : 'en';
 };
 
 export const setLanguage = (lang) => {

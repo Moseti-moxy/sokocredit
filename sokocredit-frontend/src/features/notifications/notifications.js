@@ -33,6 +33,19 @@ export function createLoanRequestNotifications({ customer, amount, purpose, loan
   writeAll([notification, ...readAll()].slice(0, 100));
 }
 
+export function createRepaymentNotification({ customer, amount, loanId }) {
+  const notification = {
+    id: `NTF-${Date.now()}`,
+    roles: STAFF_ROLES,
+    title: 'Repayment received',
+    message: `${customer} made a KES ${Number(amount).toLocaleString()} repayment on loan ${loanId}.`,
+    loanId,
+    createdAt: new Date().toISOString(),
+    readBy: [],
+  };
+  writeAll([notification, ...readAll()].slice(0, 100));
+}
+
 export function createCustomerNotification({ customerId, title, message, loanId }) {
   if (!customerId) return;
   const notification = { id: `NTF-${Date.now()}`, roles: ['customer'], customerId, title, message, loanId, createdAt: new Date().toISOString(), readBy: [] };

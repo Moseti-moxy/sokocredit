@@ -101,6 +101,22 @@ export default function NavDropdown() {
                 App Settings
               </NavLink>
             )}
+            {role === 'customer' && (
+              <NavLink
+                to="/customer-settings"
+                onClick={() => setIsOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-brand-500 text-white'
+                      : 'text-slate-600 hover:bg-brand-50 hover:text-brand-700'
+                  }`
+                }
+              >
+                <Settings size={18} />
+                Settings
+              </NavLink>
+            )}
           </nav>
 
           {/* Footer */}

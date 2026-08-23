@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
-import { loans as seedLoans, generateSchedule } from '../api/loansApi'
+import { loans as seedLoans, generateSchedule, applyRepayment } from '../api/loansApi'
 import NewLoanForm from '../components/NewLoanForm'
 import LoanTable from '../components/LoanTable'
 import { DisbursementQueue, LoanDetail, PendingQueue } from '../components/LoanWorkflow'
@@ -32,20 +32,11 @@ export default function LoanManagementPage() {
   const disburse = (loan, details) => setConfirmation({ title: 'Confirm disbursement?', message: `Record a KES ${loan.amount.toLocaleString()} ${details.method} disbursement for ${loan.customer}.`, actionLabel: 'Record disbursement', confirm: () => { update(loan.id, { status: 'Repaying', disbursedAt: details.date, disbursement: details, due: loan.schedule?.[0]?.dueDate || 'Scheduled' }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Loan disbursed', message: `KES ${loan.amount.toLocaleString()} has been disbursed via ${details.method}. Your next repayment is ${loan.schedule?.[0]?.dueDate || 'scheduled'}.` }); setNotice({ type: 'success', message: `${loan.id} disbursed via ${details.method} and the customer notified.` }) } })
   const saveSchedule = (loan, schedule) => { update(loan.id, { schedule, due: schedule.find((item) => item.status !== 'Paid')?.dueDate || 'Completed' }); setNotice({ type: 'success', message: `${loan.id} repayment schedule updated.` }) }
   const recordRepayment = (loan, payment) => {
-    const schedule = loan.schedule?.length ? loan.schedule : generateSchedule(loan)
-    let remaining = Number(payment.amount); let applied = 0
-    const updatedSchedule = schedule.map((item) => {
-      if (remaining <= 0 || item.status === 'Paid') return item
-      const outstanding = Math.max(0, Number(item.amount) - Number(item.paidAmount || 0)); const allocation = Math.min(outstanding, remaining)
-      remaining -= allocation; applied += allocation; const paidAmount = Number(item.paidAmount || 0) + allocation
-      return { ...item, paidAmount, status: paidAmount >= Number(item.amount) ? 'Paid' : 'Partially Paid' }
-    })
-    if (!applied) return setNotice({ type: 'error', message: 'This loan has no outstanding repayment balance.' })
-    const paid = Number(loan.paid || 0) + applied; const total = schedule.reduce((sum, item) => sum + Number(item.amount), 0); const complete = paid >= total - 0.01
-    const repayment = { id: `RP-${Date.now().toString().slice(-6)}`, ...payment, amount: applied, date: payment.date || new Date().toISOString().slice(0, 10) }
-    update(loan.id, { paid, progress: Math.min(100, Math.round((paid / total) * 100)), schedule: updatedSchedule, repayments: [...(loan.repayments || []), repayment], status: complete ? 'Closed' : 'Repaying', due: complete ? 'Completed' : updatedSchedule.find((item) => item.status !== 'Paid')?.dueDate })
-    createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Repayment received', message: `We received your KES ${applied.toLocaleString()} repayment via ${payment.method}.` })
-    setNotice({ type: 'success', message: `KES ${applied.toLocaleString()} repayment recorded and the customer notified.` })
+    const result = applyRepayment(loan, payment)
+    if (!result) return setNotice({ type: 'error', message: 'This loan has no outstanding repayment balance.' })
+    update(loan.id, result.changes)
+    createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Repayment received', message: `We received your KES ${result.applied.toLocaleString()} repayment via ${payment.method}.` })
+    setNotice({ type: 'success', message: `KES ${result.applied.toLocaleString()} repayment recorded and the customer notified.` })
   }
   const sendReminder = (loan, reminder) => { update(loan.id, { reminders: [...(loan.reminders || []), { ...reminder, sentAt: new Date().toISOString() }] }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Repayment reminder', message: reminder.note || `Please make your scheduled repayment for loan ${loan.id}.` }); setNotice({ type: 'success', message: `Automated ${reminder.channel} reminder queued for ${loan.customer}.` }) }
   const selected = loans.find((loan) => loan.id === selectedId)
