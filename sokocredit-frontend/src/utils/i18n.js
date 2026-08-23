@@ -1,11 +1,13 @@
 // Multi-language Support Configuration
 // Support for English and Swahili only
 
+// Metadata shown by language selectors throughout the application.
 export const SUPPORTED_LANGUAGES = {
   en: { name: 'English', nativeName: 'English', flag: '🇬🇧' },
   sw: { name: 'Swahili', nativeName: 'Kiswahili', flag: '🇰🇪' },
 };
 
+// Translation strings grouped by language and accessed through the `t` helper.
 export const translations = {
   en: {
     // Navigation
@@ -90,18 +92,22 @@ export const translations = {
 };
 
 export const getCurrentLanguage = () => {
+  // English is the safe fallback — also covers a stored preference for a
+  // language that has since been removed from SUPPORTED_LANGUAGES.
   const stored = localStorage.getItem('sokocredit.language');
   return SUPPORTED_LANGUAGES[stored] ? stored : 'en';
 };
 
 export const setLanguage = (lang) => {
   if (SUPPORTED_LANGUAGES[lang]) {
+    // Persist the choice and notify mounted UI components to refresh their text.
     localStorage.setItem('sokocredit.language', lang);
     window.dispatchEvent(new CustomEvent('language-changed', { detail: { lang } }));
   }
 };
 
 export const t = (key, lang = null) => {
+  // Fall back to English, then to the key, so missing translations stay visible.
   const currentLang = lang || getCurrentLanguage();
   const translationObj = translations[currentLang] || translations.en;
   return translationObj[key] || key;

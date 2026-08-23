@@ -31,6 +31,12 @@ function updateStoredLoan(loanId, changes) {
   localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(getAllLoans().map((loan) => (loan.id === loanId ? { ...loan, ...changes } : loan))));
 }
 
+function replaceApplication(application) {
+  const stored = JSON.parse(localStorage.getItem(LOANS_STORAGE_KEY) || '[]');
+  const loans = Array.isArray(stored) ? stored : [];
+  localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(loans.map((loan) => loan.id === application.id ? application : loan)));
+}
+
 function getLoanSummary(loans) {
   const activeLoans = loans.filter((loan) => PAYABLE_STATUSES.includes(loan.status));
   const outstanding = activeLoans.reduce((total, loan) => total + Math.max(0, Number(loan.amount || 0) - Number(loan.paid || 0)), 0);
@@ -53,6 +59,9 @@ export default function CustomerDashboard() {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [applications, setApplications] = useState(() => getApplications(user?.id));
   const [form, setForm] = useState({ amount: '', purpose: '', duration: '3', frequency: 'monthly' });
+  const [renewalLoan, setRenewalLoan] = useState(null);
+  const [renewalForm, setRenewalForm] = useState({ amount: '', duration: '3' });
+  const [renewalNotice, setRenewalNotice] = useState('');
   const [error, setError] = useState('');
   const [payLoan, setPayLoan] = useState(null);
   const [payForm, setPayForm] = useState({ amount: '', method: 'M-Pesa', reference: '' });
@@ -61,6 +70,7 @@ export default function CustomerDashboard() {
   const [interestLoan, setInterestLoan] = useState(null);
   const pendingApplication = applications.find((loan) => loan.status === 'Pending');
   const { outstanding, nextRepayment } = useMemo(() => getLoanSummary(applications), [applications]);
+  const transactions = useMemo(() => applications.flatMap((loan) => (loan.schedule || []).map((payment) => ({ ...payment, loanId: loan.id, purpose: loan.purpose || 'Loan repayment', status: payment.status || 'Unpaid' }))).sort((first, second) => String(second.dueDate).localeCompare(String(first.dueDate))), [applications]);
   const estimatedLimit = useMemo(() => {
     const dailyProfit = Number(user?.dailyProfit || 0);
     return Math.min(500000, Math.max(10000, dailyProfit ? dailyProfit * 26 * 3 : 50000));
@@ -75,6 +85,13 @@ export default function CustomerDashboard() {
   }, [user?.id]);
 
   function updateField(field, value) { setError(''); setForm((current) => ({ ...current, [field]: value })); }
+  function openRenewal(loan) { setRenewalLoan(loan); setRenewalForm({ amount: String(Math.round(Number(loan.amount || 0) * 1.25)), duration: String(loan.duration || 3) }); }
+  function submitRenewal(event) {
+    event.preventDefault(); const amount = Number(renewalForm.amount); const duration = Number(renewalForm.duration);
+    if (!renewalLoan || !Number.isFinite(amount) || amount < 1000 || !Number.isFinite(duration) || duration < 1 || duration > 24) { setError('Enter a valid renewal amount and term.'); return; }
+    const updated = { ...renewalLoan, renewalRequested: true, renewalAmount: amount, renewalDuration: duration, renewalRequestedAt: new Date().toISOString().slice(0, 10) };
+    replaceApplication(updated); setApplications((items) => items.map((loan) => loan.id === updated.id ? updated : loan)); setRenewalLoan(null); setRenewalNotice(`Your renewal request for KES ${money(amount)} has been sent for review.`);
+  }
   function submitRequest(event) {
     event.preventDefault();
     const amount = Number(form.amount); const duration = Number(form.duration);
@@ -136,19 +153,23 @@ export default function CustomerDashboard() {
     <div className="mt-6 grid gap-4 sm:grid-cols-3"><StatCard label="Active loan" value={outstanding ? `KES ${money(outstanding)}` : 'No active loan'} deltaLabel={outstanding ? 'Current balance' : 'Apply for a loan to get started'} icon={CreditCard} /><StatCard label="Next repayment" value={nextRepayment ? `KES ${money(nextRepayment.amount)}` : 'No repayment due'} deltaLabel={displayDueDate(nextRepayment?.dueDate)} icon={CalendarDays} /><StatCard label="Account status" value="Active" deltaLabel="Your account is ready for loan requests" icon={CircleDollarSign} /></div>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><h2 className="font-display font-semibold text-slate-900">Your Chama</h2><p className="mt-2 text-sm text-slate-500">{user?.chama && user.chama !== 'No Chama / Individual Borrower' ? `You are registered with ${user.chama}. Your group affiliation is included in loan assessment.` : 'You are registered as an individual borrower. Ask an agent to update your Chama affiliation if this changes.'}</p></section>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><h2 className="font-display font-semibold text-slate-900">Your next step</h2><p className="mt-2 text-sm text-slate-500">Keep your repayments on schedule to strengthen your credit profile and unlock future financing.</p></section>
+    <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-display font-semibold text-slate-900">Transaction history</h2><p className="mt-1 text-sm text-slate-500">All scheduled repayments and recorded payment activity for your loans.</p></div><span className="rounded-lg bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">{transactions.length} transactions</span></div>{transactions.length ? <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-brand-100 text-xs uppercase text-slate-400"><tr><th className="px-2 py-3 font-medium">Date</th><th className="px-2 py-3 font-medium">Description</th><th className="px-2 py-3 font-medium">Amount</th><th className="px-2 py-3 font-medium">Status</th></tr></thead><tbody>{transactions.map((transaction) => <tr key={`${transaction.loanId}-${transaction.number}`} className="border-b border-brand-50 last:border-0"><td className="px-2 py-3 text-slate-600">{transaction.dueDate}</td><td className="px-2 py-3 text-slate-800">{transaction.purpose} · Installment {transaction.number}</td><td className="px-2 py-3 font-medium text-slate-900">KES {money(transaction.amount)}</td><td className="px-2 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${transaction.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>{transaction.status}</span></td></tr>)}</tbody></table></div> : <p className="mt-4 text-sm text-slate-500">Your transactions will appear here once a loan is approved and scheduled.</p>}</section>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display font-semibold text-slate-900">Loan requests</h2><p className="mt-1 text-sm text-slate-500">Track every application from review through disbursement.</p></div><span className="rounded-lg bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">Estimated eligible: KES {money(estimatedLimit)}</span></div>
+      {renewalNotice && <p role="status" className="mt-4 rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-800">{renewalNotice}</p>}
       {applications.length ? <div className="mt-4 grid gap-3">{applications.map((loan) => {
         const canPay = PAYABLE_STATUSES.includes(loan.status);
         const canViewInterest = ['Disbursed', 'Repaying', 'Closed'].includes(loan.status) && loan.interestRate;
+        const canRenew = loan.status === 'Repaying' && !loan.renewalRequested;
         return <article key={loan.id} className="rounded-xl border border-brand-100 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${loan.loanType === 'chama' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700'}`}>{loan.loanType === 'chama' ? 'Chama group loan' : 'Individual loan'}</span><p className="mt-2 font-semibold text-slate-900">KES {money(loan.amount)} <span className="font-normal text-slate-500">· {loan.purpose || 'Loan request'}</span></p><p className="mt-1 text-xs text-slate-500">Requested {loan.appliedAt} · {loan.duration} months · {loan.frequency}</p>{loan.rejectionReason && <p className="mt-2 text-xs text-red-600">Reason: {loan.rejectionReason}</p>}</div>
+            <div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${loan.loanType === 'chama' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700'}`}>{loan.loanType === 'chama' ? 'Chama group loan' : 'Individual loan'}</span><p className="mt-2 font-semibold text-slate-900">KES {money(loan.amount)} <span className="font-normal text-slate-500">· {loan.purpose || 'Loan request'}</span></p><p className="mt-1 text-xs text-slate-500">Requested {loan.appliedAt} · {loan.duration} months · {loan.frequency}</p>{loan.rejectionReason && <p className="mt-2 text-xs text-red-600">Reason: {loan.rejectionReason}</p>}{loan.renewalRequested && <p className="mt-2 text-xs text-brand-700">Renewal request: KES {money(loan.renewalAmount)} for {loan.renewalDuration} months · Under review</p>}</div>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${loan.status === 'Rejected' ? 'bg-red-50 text-red-700' : loan.status === 'Pending' ? 'bg-amber-50 text-amber-700' : loan.status === 'Repaying' ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-700'}`}>{loan.status}</span>
           </div>
-          {(canPay || canViewInterest) && <div className="mt-3 flex flex-wrap gap-2 border-t border-brand-50 pt-3">
+          {(canPay || canViewInterest || canRenew) && <div className="mt-3 flex flex-wrap gap-2 border-t border-brand-50 pt-3">
             {canPay && <button type="button" onClick={() => openPayment(loan)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-600"><Wallet size={14} /> Make a payment</button>}
             {canViewInterest && <button type="button" onClick={() => setInterestLoan(loan)} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50"><TrendingUp size={14} /> View interest growth</button>}
+            {canRenew && <button type="button" onClick={() => openRenewal(loan)} className="rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50">Request renewal</button>}
           </div>}
         </article>;
       })}</div> : <p className="mt-4 text-sm text-slate-500">You have not submitted any loan requests yet.</p>}
@@ -177,5 +198,6 @@ export default function CustomerDashboard() {
       </div>
       <p className="mt-3 text-xs text-slate-500">This shows how much of your total repayment (principal vs. interest) accumulates as you complete each installment.</p>
     </div></div>}
+    {renewalLoan && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="renewal-title"><form onSubmit={submitRenewal} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="renewal-title" className="font-display text-xl font-semibold text-slate-900">Request loan renewal</h2><p className="mt-1 text-sm text-slate-500">Your request will be reviewed before any funds are disbursed.</p></div><button type="button" onClick={() => setRenewalLoan(null)} aria-label="Close renewal form" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Renewal amount (KES)<input required min="1000" type="number" value={renewalForm.amount} onChange={(event) => setRenewalForm((current) => ({ ...current, amount: event.target.value }))} className="app-field h-11 px-3" /></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">Term<select value={renewalForm.duration} onChange={(event) => setRenewalForm((current) => ({ ...current, duration: event.target.value }))} className="app-field h-11 px-3"><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option></select></label></div><button type="submit" className="mt-5 h-11 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600">Submit renewal request</button></form></div>}
   </AppShell>;
 }

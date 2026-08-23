@@ -1,6 +1,6 @@
-# SokoCredit — Agent Frontend
+# SokoCredit — Microfinance Operations Portal
 
-SokoCredit is a responsive React-based agent portal for managing customers, loans, repayments, risk, communications, and other microfinance operations.
+SokoCredit is a responsive React portal for the day-to-day work of microfinance teams. It gives administrators, field agents, loan officers, and customers role-appropriate views for customer management, lending, communications, field operations, and reporting.
 
 The frontend is built with React, Redux Toolkit, Tailwind CSS v4, and Vite. It is currently designed to work with mock data and can be connected to a Flask backend through the configured API layer.
 
@@ -18,6 +18,7 @@ The frontend is built with React, Redux Toolkit, Tailwind CSS v4, and Vite. It i
 * Customer location management
 * WhatsApp, SMS, and email communication interfaces
 * Role-based navigation and access
+* Admin agent directory with station, active/inactive state, and last-active time
 * Multi-language support
 * Responsive layouts for mobile, tablet, and desktop
 * Audit logging and activity monitoring
@@ -45,7 +46,7 @@ The frontend is built with React, Redux Toolkit, Tailwind CSS v4, and Vite. It i
 
 ```bash
 git clone <repository-url>
-cd sokocredit-agent-frontend
+cd sokocredit-frontend
 npm install
 ```
 
@@ -56,6 +57,19 @@ npm run dev
 ```
 
 The development server will be available at the URL provided by Vite.
+
+### Demo accounts
+
+With `VITE_USE_MOCK_AUTH=true` (the default), use these accounts to explore role-specific views:
+
+| Portal | Identifier | PIN | What to try |
+| --- | --- | --- | --- |
+| Staff | `ADM-0001` | `1001` | Open **Agents** to view the complete agent directory. |
+| Staff | `AGT-0001` | `1234` | Sign in to record the agent as active. |
+| Staff | `LO-0001` | `5555` | View the loan-officer workspace. |
+| Customer | `12345678` | `1234` | View the customer portal. |
+
+The demo data is stored in the browser. Clearing site data resets agents created locally and any manually changed activity state.
 
 ### Production Build
 
@@ -115,6 +129,8 @@ src/
 │   └── LoanRenewals.jsx
 │
 ├── data/
+│   ├── agentDirectory.js
+│   ├── mockAuth.js
 │   └── mockData.js
 │
 └── utils/
@@ -237,13 +253,24 @@ Features include:
 * Renewal requests
 * Renewal history
 
+### Admin Agent Directory
+
+Administrators can open **Agents** from the sidebar to see every field agent in one place. Each row shows the agent's email, station/market, activity state, and last-active time. The page also provides:
+
+* Active, inactive, and all-agent filters
+* Search by agent name, email, staff ID, or station
+* Agent creation with an assigned station
+* Manual active/inactive updates for the demo environment
+
+When a mock field agent signs in, the directory automatically records their last-active timestamp and marks them active. The current frontend implementation persists this information in `localStorage`; production deployments should retrieve and update it through an authenticated backend endpoint.
+
 ## Role-Based Access
 
 The interface supports different application roles:
 
 | Role         | Access                                                                    |
 | ------------ | ------------------------------------------------------------------------- |
-| Admin        | Full system access                                                        |
+| Admin        | Full system access, including the Agents directory and staff monitoring   |
 | Agent        | Customer, loan, risk, communication and field operations                  |
 | Loan Officer | Loan, inventory, renewal and reporting functions                          |
 | Customer     | Personal loans, repayments, notifications and available customer services |
@@ -270,9 +297,7 @@ The application supports:
 
 * English
 * Swahili
-* Dholuo
-* Gikuyu
-* Kikamba
+
 
 Language preferences are persisted locally and can be changed from the Settings page.
 
