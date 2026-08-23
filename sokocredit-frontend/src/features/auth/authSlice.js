@@ -77,7 +77,7 @@ export const signupUser = createAsyncThunk(
   async ({ fullName, email, password, customerId, pin, profile }, { rejectWithValue }) => {
     if (USE_MOCK_AUTH) {
       try {
-        const user = customerId ? addCustomer({ name: fullName, customerId, pin, ...profile }) : null;
+        const user = customerId ? addCustomer({ name: fullName, customerId, email, pin, ...profile }) : null;
         if (!user) return rejectWithValue('Only customers can create an account.');
         const safeUser = { ...user };
         delete safeUser.password;

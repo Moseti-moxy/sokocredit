@@ -103,13 +103,14 @@ export function getAllCustomerIds() {
   }
 }
 
-export function addCustomer({ name, customerId, pin, ...profile }) {
+export function addCustomer({ name, customerId, email, pin, ...profile }) {
   const customers = readStored(CUSTOMER_STORAGE_KEY);
   if (customers.some((customer) => customer.identifier.toLowerCase() === customerId.toLowerCase())) throw new Error('That customer ID is already in use.');
+  if (email && customers.some((customer) => customer.email && customer.email.toLowerCase() === email.toLowerCase())) throw new Error('That email is already in use.');
   // National ID stays the private sign-in identifier. Internal records and
   // support cases use a separate permanent CUS-xxxx customer reference.
   const id = nextStaffId('customer', MOCK_USERS);
-  const customer = { id, customerId: id, identifier: customerId, name, password: pin, role: 'customer', market: 'Customer portal', ...profile };
+  const customer = { id, customerId: id, identifier: customerId, name, email, password: pin, role: 'customer', market: 'Customer portal', ...profile };
   localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify([...customers, customer]));
   return customer;
 }
@@ -117,7 +118,7 @@ export function addCustomer({ name, customerId, pin, ...profile }) {
 export function findMockUser(identifier, password) {
   const needle = identifier.trim().toLowerCase();
   const user = [...MOCK_USERS, ...getLoanOfficers(), ...readStored(CUSTOMER_STORAGE_KEY)].find(
-    (u) => u.identifier.toLowerCase() === needle || u.email.toLowerCase() === needle
+    (u) => u.identifier.toLowerCase() === needle || (u.email && u.email.toLowerCase() === needle)
   );
   if (!user || user.password !== password) return null;
   // eslint-disable-next-line no-unused-vars
