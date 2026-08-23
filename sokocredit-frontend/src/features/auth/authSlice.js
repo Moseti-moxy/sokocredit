@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiClient } from '../../api/client';
 import { addCustomer, findMockUser } from '../../data/mockAuth';
+import { recordAgentActivity } from '../../data/agentDirectory';
 
 export const AUTH_STORAGE_KEY = 'sokocredit.auth';
 
@@ -129,6 +130,10 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.role = action.payload.user.role;
         persistAuth(action.payload.token, action.payload.user, action.payload.remember);
+        // In the mock app this is the source of the admin directory's
+        // "active" and "last active" indicators. The production equivalent
+        // belongs in the authentication/session API.
+        recordAgentActivity(action.payload.user);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.status = 'failed';
