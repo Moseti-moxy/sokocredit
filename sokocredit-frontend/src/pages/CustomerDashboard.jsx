@@ -23,6 +23,21 @@ function saveApplication(application) {
   localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify([application, ...loans]));
 }
 
+function getLoanSummary(loans) {
+  const activeLoans = loans.filter((loan) => ['Disbursed', 'Repaying'].includes(loan.status));
+  const outstanding = activeLoans.reduce((total, loan) => total + Math.max(0, Number(loan.amount || 0) - Number(loan.paid || 0)), 0);
+  const nextRepayment = activeLoans
+    .flatMap((loan) => (loan.schedule || []).filter((item) => item.status !== 'Paid'))
+    .sort((first, second) => String(first.dueDate).localeCompare(String(second.dueDate)))[0];
+  return { outstanding, nextRepayment };
+}
+
+function displayDueDate(date) {
+  if (!date) return 'No repayment due';
+  const parsed = new Date(`${date}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? 'Repayment scheduled' : `Due ${parsed.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+}
+
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const dispatch = useDispatch();
@@ -32,6 +47,7 @@ export default function CustomerDashboard() {
   const [form, setForm] = useState({ amount: '', purpose: '', duration: '3', frequency: 'monthly' });
   const [error, setError] = useState('');
   const pendingApplication = applications.find((loan) => loan.status === 'Pending');
+  const { outstanding, nextRepayment } = useMemo(() => getLoanSummary(applications), [applications]);
   const estimatedLimit = useMemo(() => {
     const dailyProfit = Number(user?.dailyProfit || 0);
     return Math.min(500000, Math.max(10000, dailyProfit ? dailyProfit * 26 * 3 : 50000));
@@ -68,9 +84,9 @@ export default function CustomerDashboard() {
   }
 
   return <AppShell title={`Welcome, ${user?.name?.split(' ')[0] || 'Customer'}`} subtitle="Your SokoCredit account overview">
-    <div className="rounded-2xl bg-brand-700 p-6 text-white sm:p-8"><p className="text-sm text-brand-100">Customer ID</p><p className="mt-1 font-display text-xl font-semibold">{user?.id}</p><div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm text-brand-100">View your active loan, repayment dates, and account activity in one simple place.</p><button type="button" onClick={() => setIsRequestOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"><Banknote size={18} /> Request a loan</button></div></div>
+    <div className="rounded-2xl bg-brand-700 p-6 text-white sm:p-8"><p className="text-sm text-brand-100">Customer name</p><p className="mt-1 font-display text-xl font-semibold">{user?.name || 'Customer'}</p><div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm text-brand-100">View your active loan, repayment dates, and account activity in one simple place.</p><button type="button" onClick={() => setIsRequestOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"><Banknote size={18} /> Request a loan</button></div></div>
     {pendingApplication && <section className="mt-6 flex gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800"><CheckCircle2 className="mt-0.5 shrink-0 text-brand-600" size={20} /><div><p className="font-semibold">Your loan request is being reviewed</p><p className="mt-1">KES {money(pendingApplication.amount)} for {pendingApplication.purpose}. We will update you once an agent has reviewed it.</p></div></section>}
-    <div className="mt-6 grid gap-4 sm:grid-cols-3"><StatCard label="Active loan" value="KES 45,000" deltaLabel="Current balance" icon={CreditCard} /><StatCard label="Next repayment" value="KES 3,750" deltaLabel="Due 28 Aug 2026" icon={CalendarDays} /><StatCard label="Account status" value="Active" deltaLabel="Payments up to date" icon={CircleDollarSign} /></div>
+    <div className="mt-6 grid gap-4 sm:grid-cols-3"><StatCard label="Active loan" value={outstanding ? `KES ${money(outstanding)}` : 'No active loan'} deltaLabel={outstanding ? 'Current balance' : 'Apply for a loan to get started'} icon={CreditCard} /><StatCard label="Next repayment" value={nextRepayment ? `KES ${money(nextRepayment.amount)}` : 'No repayment due'} deltaLabel={displayDueDate(nextRepayment?.dueDate)} icon={CalendarDays} /><StatCard label="Account status" value="Active" deltaLabel="Your account is ready for loan requests" icon={CircleDollarSign} /></div>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><h2 className="font-display font-semibold text-slate-900">Your Chama</h2><p className="mt-2 text-sm text-slate-500">{user?.chama && user.chama !== 'No Chama / Individual Borrower' ? `You are registered with ${user.chama}. Your group affiliation is included in loan assessment.` : 'You are registered as an individual borrower. Ask an agent to update your Chama affiliation if this changes.'}</p></section>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><h2 className="font-display font-semibold text-slate-900">Your next step</h2><p className="mt-2 text-sm text-slate-500">Keep your repayments on schedule to strengthen your credit profile and unlock future financing.</p></section>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display font-semibold text-slate-900">Loan requests</h2><p className="mt-1 text-sm text-slate-500">Track every application from review through disbursement.</p></div><span className="rounded-lg bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">Estimated eligible: KES {money(estimatedLimit)}</span></div>{applications.length ? <div className="mt-4 grid gap-3">{applications.map((loan) => <article key={loan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-100 p-4"><div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${loan.loanType === 'chama' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700'}`}>{loan.loanType === 'chama' ? 'Chama group loan' : 'Individual loan'}</span><p className="mt-2 font-semibold text-slate-900">KES {money(loan.amount)} <span className="font-normal text-slate-500">· {loan.purpose || 'Loan request'}</span></p><p className="mt-1 text-xs text-slate-500">Requested {loan.appliedAt} · {loan.duration} months · {loan.frequency}</p>{loan.rejectionReason && <p className="mt-2 text-xs text-red-600">Reason: {loan.rejectionReason}</p>}</div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${loan.status === 'Rejected' ? 'bg-red-50 text-red-700' : loan.status === 'Pending' ? 'bg-amber-50 text-amber-700' : loan.status === 'Repaying' ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-700'}`}>{loan.status}</span></article>)}</div> : <p className="mt-4 text-sm text-slate-500">You have not submitted any loan requests yet.</p>}</section>

@@ -95,13 +95,12 @@ export function getStaffDirectory() {
 // Every known customer ID (seeded demo accounts + locally registered ones).
 export function getAllCustomerIds() {
   const seeded = MOCK_USERS.filter((user) => user.role === 'customer').map((user) => user.id);
-  let stored = [];
   try {
-    stored = JSON.parse(localStorage.getItem(CUSTOMER_STORAGE_KEY) || '[]').map((customer) => customer.id);
+    const stored = JSON.parse(localStorage.getItem(CUSTOMER_STORAGE_KEY) || '[]').map((customer) => customer.id);
+    return [...new Set([...seeded, ...stored])];
   } catch {
-    stored = [];
+    return seeded;
   }
-  return [...new Set([...seeded, ...stored])];
 }
 
 export function addCustomer({ name, customerId, pin, ...profile }) {

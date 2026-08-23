@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import { formatKES } from '../utils/format';
 
 export default function LoanRenewals() {
-  const [renewals] = useState([
+  const [renewals, setRenewals] = useState([
     { id: 1, customer: 'Jane Wanjiru', loanAmount: 50000, paidAmount: 48000, paymentHistory: 'Excellent', eligible: true, suggestedAmount: 75000, daysUntilMaturity: 5 },
     { id: 2, customer: 'David Otieno', loanAmount: 100000, paidAmount: 95000, paymentHistory: 'Good', eligible: true, suggestedAmount: 150000, daysUntilMaturity: 10 },
     { id: 3, customer: 'Mary Kipchoge', loanAmount: 75000, paidAmount: 60000, paymentHistory: 'Fair', eligible: false, suggestedAmount: 0, daysUntilMaturity: 15 },
   ]);
+  const [notice, setNotice] = useState('');
+  const updateNotice = (message) => setNotice(message);
+  const processRenewal = (id) => {
+    const renewal = renewals.find((item) => item.id === id);
+    setRenewals((items) => items.map((item) => item.id === id ? { ...item, eligible: false, paymentHistory: 'Renewal processed' } : item));
+    updateNotice(`Renewal for ${renewal.customer} has been submitted for disbursement.`);
+  };
 
   return (
     <AppShell title="Loan Renewals" subtitle="Automated renewal suggestions based on payment history.">
@@ -30,6 +37,7 @@ export default function LoanRenewals() {
           <p className="font-display text-2xl font-semibold text-blue-600">96%</p>
         </div>
       </div>
+      {notice && <p role="status" className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">{notice}</p>}
 
       <div className="space-y-4">
         {renewals.map((renewal) => (
@@ -87,15 +95,15 @@ export default function LoanRenewals() {
             <div className="flex gap-2">
               {renewal.eligible ? (
                 <>
-                  <button className="flex-1 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
+                  <button type="button" onClick={() => processRenewal(renewal.id)} className="flex-1 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
                     Process Renewal
                   </button>
-                  <button className="px-4 py-2.5 border border-brand-200 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-50">
+                  <button type="button" onClick={() => updateNotice(`${renewal.customer}: ${formatKES(renewal.paidAmount)} paid on a ${formatKES(renewal.loanAmount)} loan.`)} className="px-4 py-2.5 border border-brand-200 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-50">
                     View Details
                   </button>
                 </>
               ) : (
-                <button className="w-full px-4 py-2.5 border border-orange-200 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-50">
+                <button type="button" onClick={() => updateNotice(`${renewal.customer}'s payment history has been opened for review.`)} className="w-full px-4 py-2.5 border border-orange-200 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-50">
                   Review Payment History
                 </button>
               )}

@@ -8,6 +8,8 @@ export default function CustomerLocation() {
     { id: 2, name: 'David Otieno', market: 'Kawangware Market', lat: -1.3092, lng: 36.7832, lastUpdate: '5 mins ago', status: 'Active', distance: '5.2 km' },
     { id: 3, name: 'Mary Kipchoge', market: 'Kamukunji Market', lat: -1.3159, lng: 36.8575, lastUpdate: '12 mins ago', status: 'Inactive', distance: '3.8 km' },
   ]);
+  const [notice, setNotice] = useState('');
+  const [mapVisible, setMapVisible] = useState(false);
 
   return (
     <AppShell title="Customer Locations" subtitle="GPS tracking and route optimization for agents and customers.">
@@ -21,16 +23,17 @@ export default function CustomerLocation() {
           <p className="font-display text-2xl font-semibold text-slate-900">{locations.length}</p>
         </div>
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
-          <button className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
+          <button type="button" onClick={() => setNotice(`Route optimized for ${locations.filter((location) => location.status === 'Active').length} active customer locations.`)} className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
             <Route size={16} /> Optimize Route
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
-          <button className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
+          <button type="button" onClick={() => setMapVisible((visible) => !visible)} className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
             <Navigation size={16} /> View Map
           </button>
         </div>
       </div>
+      {notice && <p role="status" className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">{notice}</p>}
 
       <div className="bg-white rounded-2xl border border-brand-100 p-5 mb-6">
         <h2 className="font-display font-semibold text-slate-900 mb-4">Active Tracking</h2>
@@ -61,8 +64,8 @@ export default function CustomerLocation() {
           <div className="w-full h-64 bg-brand-50 rounded-lg flex items-center justify-center text-slate-500">
             <div className="text-center">
               <MapPin size={32} className="mx-auto mb-2 text-brand-300" />
-              <p className="text-sm">Map integration coming soon</p>
-              <p className="text-xs text-slate-400 mt-1">Google Maps or OpenStreetMap</p>
+              <p className="text-sm">{mapVisible ? 'Map preview enabled' : 'Select “View Map” to show the map preview'}</p>
+              <p className="text-xs text-slate-400 mt-1">{mapVisible ? locations.filter((location) => location.status === 'Active').map((location) => location.name).join(' · ') : 'Google Maps or OpenStreetMap'}</p>
             </div>
           </div>
         </div>

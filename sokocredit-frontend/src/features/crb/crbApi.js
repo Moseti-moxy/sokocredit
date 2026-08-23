@@ -32,6 +32,7 @@ export const getCRBStatus = async () => {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/crb/status`);
     return response.json();
   } catch (error) {
+    console.error('CRB status check failed:', error);
     return { status: 'offline' };
   }
 };

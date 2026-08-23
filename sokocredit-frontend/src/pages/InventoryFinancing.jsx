@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { Package, Plus, TrendingUp } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import { formatKES } from '../utils/format';
 
 export default function InventoryFinancing() {
-  const [inventory] = useState([
+  const [inventory, setInventory] = useState([
     { id: 1, item: 'Vegetables', quantity: 50, unitCost: 2000, financedAmount: 80000, soldUnits: 32, repaymentStatus: 'On Track', daysLeft: 15 },
     { id: 2, item: 'Fruits', quantity: 100, unitCost: 1500, financedAmount: 120000, soldUnits: 65, repaymentStatus: 'On Track', daysLeft: 22 },
     { id: 3, item: 'Grains', quantity: 200, unitCost: 800, financedAmount: 160000, soldUnits: 120, repaymentStatus: 'At Risk', daysLeft: 5 },
   ]);
+  const [notice, setNotice] = useState('');
+
+  const addStock = () => {
+    const id = Math.max(...inventory.map((item) => item.id), 0) + 1;
+    setInventory((items) => [...items, { id, item: `New stock #${id}`, quantity: 1, unitCost: 0, financedAmount: 0, soldUnits: 0, repaymentStatus: 'On Track', daysLeft: 30 }]);
+    setNotice('A new stock record was added. Update its details when the financing data is available.');
+  };
 
   return (
     <AppShell title="Inventory Financing" subtitle="Track and manage stock financing for market traders.">
@@ -26,11 +33,12 @@ export default function InventoryFinancing() {
           <p className="font-display text-2xl font-semibold text-slate-900">{inventory.reduce((sum, i) => sum + i.soldUnits, 0)}</p>
         </div>
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
-          <button className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
+          <button type="button" onClick={addStock} className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
             <Plus size={16} /> Add Stock
           </button>
         </div>
       </div>
+      {notice && <p role="status" className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">{notice}</p>}
 
       <div className="bg-white rounded-2xl border border-brand-100 overflow-hidden">
         <div className="p-5 border-b border-brand-100">

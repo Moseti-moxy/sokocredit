@@ -8,6 +8,9 @@ export default function BusinessRegistry() {
     { id: 2, name: 'Otieno & Partners Ltd', regNumber: 'BRN-2024-002', owner: 'David Otieno', type: 'Partnership', status: 'Verified', registered: '2022-08-22', synced: true },
     { id: 3, name: 'Kipchoge Enterprises', regNumber: 'BRN-2024-003', owner: 'Mary Kipchoge', type: 'Sole Proprietor', status: 'Pending', registered: '2025-02-10', synced: false },
   ]);
+  const [query, setQuery] = useState('');
+  const [notice, setNotice] = useState('');
+  const matchingBusinesses = businesses.filter((business) => `${business.name} ${business.regNumber}`.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <AppShell title="Business Registry" subtitle="Verify and link business registrations with Kenya's business registry systems.">
@@ -25,7 +28,7 @@ export default function BusinessRegistry() {
           <p className="font-display text-2xl font-semibold text-orange-600">{businesses.filter(b => b.status === 'Pending').length}</p>
         </div>
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
-          <button className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
+          <button type="button" onClick={() => setNotice('Business registration form is ready. Enter a registration number in the search field to verify an existing business.')} className="flex items-center gap-2 text-brand-600 hover:text-brand-700 font-medium text-sm">
             <Building2 size={16} /> Register Business
           </button>
         </div>
@@ -35,16 +38,17 @@ export default function BusinessRegistry() {
         <div className="flex gap-3">
           <div className="flex-1 relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input placeholder="Search by business name or registration number..." className="w-full rounded-lg border border-brand-100 bg-white py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by business name or registration number..." className="w-full rounded-lg border border-brand-100 bg-white py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
           </div>
-          <button className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
+          <button type="button" onClick={() => setNotice(query ? `${matchingBusinesses.length} matching business${matchingBusinesses.length === 1 ? '' : 'es'} found.` : 'Enter a business name or registration number to verify it.')} className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
             Verify
           </button>
         </div>
       </div>
+      {notice && <p role="status" className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">{notice}</p>}
 
       <div className="space-y-4">
-        {businesses.map((business) => (
+        {matchingBusinesses.map((business) => (
           <div key={business.id} className={`rounded-2xl border p-5 ${business.status === 'Verified' ? 'bg-white border-brand-100' : 'bg-orange-50/30 border-orange-100'}`}>
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="flex-1">
@@ -85,15 +89,16 @@ export default function BusinessRegistry() {
             </div>
 
             <div className="flex gap-2">
-              <button className="flex-1 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
+              <button type="button" onClick={() => setNotice(`${business.name} (${business.regNumber}) is ${business.status.toLowerCase()}.`)} className="flex-1 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
                 View Details
               </button>
-              <button className="px-4 py-2.5 border border-brand-200 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-50">
+              <button type="button" onClick={() => setNotice(`${business.name} has been selected to link to a loan.`)} className="px-4 py-2.5 border border-brand-200 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-50">
                 Link to Loan
               </button>
             </div>
           </div>
         ))}
+        {!matchingBusinesses.length && <p className="rounded-2xl border border-brand-100 bg-white p-6 text-center text-sm text-slate-500">No businesses match your search.</p>}
       </div>
     </AppShell>
   );

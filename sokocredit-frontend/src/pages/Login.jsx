@@ -130,7 +130,7 @@ export default function Login({ portal = 'customer' }) {
               </label>
               <button
                 type="button"
-                onClick={() => setSupportMessage(isCustomer && loginMethod === 'email' ? 'To reset your PIN, please visit our website or contact SokoCredit Support.' : 'To reset your PIN, please contact SokoCredit Support.')}
+                onClick={() => setSupportMessage(isCustomer ? 'To reset your PIN, please visit our website or contact SokoCredit Support.' : 'To reset your PIN, please contact SokoCredit Support.')}
                 className="text-brand-600 font-medium hover:underline"
               >
                 Forgot password?

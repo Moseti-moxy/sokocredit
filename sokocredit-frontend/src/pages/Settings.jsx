@@ -1,4 +1,6 @@
 import { Plus, Star, Link2 } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import LanguageSettings from '../components/LanguageSettings';
 import { fieldAgents, loanParameterDefaults, integrationStatus } from '../data/mockData';
@@ -15,6 +17,9 @@ function Stars({ rating }) {
 }
 
 export default function Settings() {
+  const navigate = useNavigate();
+  const [parameters, setParameters] = useState({ standardInterestRate: loanParameterDefaults.standardInterestRate, maxLoanTermDays: loanParameterDefaults.maxLoanTermDays });
+  const [notice, setNotice] = useState('');
   return (
     <AppShell title="System Settings & Agents" subtitle="Manage active agents and monitor performance metrics.">
       <div className="grid lg:grid-cols-[1fr_320px] gap-5">
@@ -24,7 +29,7 @@ export default function Settings() {
               <h2 className="font-display font-semibold text-slate-900">Field Agents</h2>
               <p className="text-xs text-slate-500 mt-0.5">Manage active agents and monitor performance metrics.</p>
             </div>
-            <button className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl px-3.5 py-2 shrink-0">
+            <button type="button" onClick={() => navigate('/loan-officers')} className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl px-3.5 py-2 shrink-0">
               <Plus size={15} /> New Agent
             </button>
           </div>
@@ -76,7 +81,7 @@ export default function Settings() {
               </tbody>
             </table>
           </div>
-          <button className="w-full text-center text-sm font-medium text-brand-600 py-3 hover:underline">
+          <button type="button" onClick={() => navigate('/loan-officers')} className="w-full text-center text-sm font-medium text-brand-600 py-3 hover:underline">
             View All 24 Agents
           </button>
         </div>
@@ -90,14 +95,16 @@ export default function Settings() {
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Standard Interest Rate (%)</label>
                 <input
-                  defaultValue={loanParameterDefaults.standardInterestRate}
+                  value={parameters.standardInterestRate}
+                  onChange={(event) => setParameters((current) => ({ ...current, standardInterestRate: event.target.value }))}
                   className="w-full px-3 py-2.5 rounded-lg border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Max Loan Term (Days)</label>
                 <select
-                  defaultValue={loanParameterDefaults.maxLoanTermDays}
+                  value={parameters.maxLoanTermDays}
+                  onChange={(event) => setParameters((current) => ({ ...current, maxLoanTermDays: event.target.value }))}
                   className="w-full px-3 py-2.5 rounded-lg border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 >
                   <option value={30}>30 Days</option>
@@ -105,7 +112,7 @@ export default function Settings() {
                   <option value={90}>90 Days</option>
                 </select>
               </div>
-              <button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl py-2.5 text-sm">
+              <button type="button" onClick={() => setNotice(`Loan parameters saved: ${parameters.standardInterestRate}% interest, ${parameters.maxLoanTermDays}-day maximum term.`)} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl py-2.5 text-sm">
                 Save Parameters
               </button>
             </div>
@@ -124,6 +131,7 @@ export default function Settings() {
               ))}
             </div>
           </div>
+          {notice && <p role="status" className="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-800">{notice}</p>}
         </div>
       </div>
     </AppShell>
