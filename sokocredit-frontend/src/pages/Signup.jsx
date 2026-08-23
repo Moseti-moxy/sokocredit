@@ -4,14 +4,13 @@ import { useDispatch } from 'react-redux';
 import { Building2, Eye, EyeOff, ShieldCheck, UserRoundPlus } from 'lucide-react';
 import { signupUser, clearAuthError } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
+import { UNSAFE_PINS } from '../utils/pin';
 
 // Default values match the most common market-trader profile and keep the
 // form controlled from its first render.
 const initialForm = { name: '', phone: '+254', nationalId: '', email: '', kraPin: '', market: 'Wakulima Market (Marikiti)', stall: '', commodity: 'Vegetables & Fruits (Mama Mboga)', yearsOperating: '3', dailyTurnover: '', dailyProfit: '', chama: 'No Chama / Individual Borrower', nextOfKin: '', relationship: 'Spouse', nextOfKinPhone: '+254', pin: '' };
 // Shared input classes keep the large registration form visually consistent.
 const input = 'app-field h-11 w-full px-3 text-sm';
-// Reject predictable PINs before account creation to protect customer access.
-const unsafePins = new Set(['0000', '1111', '1234', '12345', '123456', '1234567', '12345678', '111111', '222222', '333333', '444444', '555555', '666666', '777777', '888888', '999999']);
 
 // Reusable field wrapper that connects an input with its visible label.
 function Field({ label, required, children }) { return <label className="grid gap-2 text-sm font-medium text-slate-700">{label}{required && ' *'}{children}</label>; }
@@ -43,7 +42,7 @@ export default function Signup() {
     // Validate the required KYC and business details before sending data to Redux/API.
     if (!form.name.trim() || form.phone.replace(/\D/g, '').length < 10 || !/^(\d{7,8}|\d{14})$/.test(nationalId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !form.stall.trim() || Number(form.dailyTurnover) <= 0 || !/^\d{4,8}$/.test(form.pin)) return setFormError('Complete the required trader details, enter a valid Kenyan National ID number (7–8 digit ID or 14-digit Maisha Namba), a valid email address, and choose a 4–8 digit PIN.');
     // Prevent common, easily guessed PINs even when their length is valid.
-    if (unsafePins.has(form.pin)) return setFormError('Choose a less predictable PIN. Common PINs such as 1234 can be reported as compromised by your browser.');
+    if (UNSAFE_PINS.has(form.pin)) return setFormError('Choose a less predictable PIN. Common PINs such as 1234 can be reported as compromised by your browser.');
     // Keep sign-in credentials separate from the wider customer/business profile.
     dispatch(signupUser({ fullName: form.name.trim(), email, customerId: nationalId, pin: form.pin, profile: { phone: form.phone, nationalId, kraPin: form.kraPin.trim(), market: form.market, location: form.stall.trim(), business: form.commodity, yearsOperating: Number(form.yearsOperating), dailyTurnover: Number(form.dailyTurnover), dailyProfit: Number(form.dailyProfit || 0), chama: form.chama, nextOfKin: form.nextOfKin.trim(), relationship: form.relationship, nextOfKinPhone: form.nextOfKinPhone } }));
   };

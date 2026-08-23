@@ -59,9 +59,47 @@ export const MOCK_USERS = [
 const STAFF_STORAGE_KEY = 'sokocredit.agents';
 const LEGACY_STAFF_STORAGE_KEY = 'sokocredit.loan-officers';
 const CUSTOMER_STORAGE_KEY = 'sokocredit.customers';
+// Overrides a user's password without rewriting their (possibly seeded,
+// read-only-in-spirit) account record — used by "Change PIN" and "Forgot
+// PIN" so both work for seeded demo accounts and locally created ones alike.
+const PASSWORD_OVERRIDES_KEY = 'sokocredit.password-overrides';
 
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+
+function readPasswordOverrides() {
+  try { return JSON.parse(localStorage.getItem(PASSWORD_OVERRIDES_KEY) || '{}'); } catch { return {}; }
+}
+
+function currentPasswordFor(user) {
+  const overrides = readPasswordOverrides();
+  return overrides[user.id] ?? user.password;
+}
+
+export function setUserPassword(userId, newPassword) {
+  const overrides = readPasswordOverrides();
+  overrides[userId] = newPassword;
+  localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
+function findAccount(identifier) {
+  const needle = identifier.trim().toLowerCase();
+  return [...MOCK_USERS, ...getLoanOfficers(), ...readStored(CUSTOMER_STORAGE_KEY)].find(
+    (u) => u.identifier.toLowerCase() === needle || (u.email && u.email.toLowerCase() === needle)
+  );
+}
+
+// Looks up an account by identifier or email alone (no password) and reports
+// which field matched, so "Forgot PIN" can ask for the other one as a second
+// factor before allowing a reset.
+export function findAccountByIdentifier(identifier) {
+  const user = findAccount(identifier);
+  if (!user) return null;
+  const matchedBy = user.identifier.toLowerCase() === identifier.trim().toLowerCase() ? 'identifier' : 'email';
+  // eslint-disable-next-line no-unused-vars
+  const { password: _pw, ...safeUser } = user;
+  return { account: safeUser, matchedBy };
 }
 
 export function getLoanOfficers() { return [...readStored(LEGACY_STAFF_STORAGE_KEY), ...readStored(STAFF_STORAGE_KEY)].map((agent) => ({ ...agent, role: 'agent' })); }
@@ -116,11 +154,8 @@ export function addCustomer({ name, customerId, email, pin, ...profile }) {
 }
 
 export function findMockUser(identifier, password) {
-  const needle = identifier.trim().toLowerCase();
-  const user = [...MOCK_USERS, ...getLoanOfficers(), ...readStored(CUSTOMER_STORAGE_KEY)].find(
-    (u) => u.identifier.toLowerCase() === needle || (u.email && u.email.toLowerCase() === needle)
-  );
-  if (!user || user.password !== password) return null;
+  const user = findAccount(identifier);
+  if (!user || currentPasswordFor(user) !== password) return null;
   // eslint-disable-next-line no-unused-vars
   const { password: _pw, ...safeUser } = user;
   return safeUser;

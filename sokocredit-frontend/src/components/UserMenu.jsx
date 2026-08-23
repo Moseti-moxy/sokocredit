@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, KeyRound } from 'lucide-react';
 import { logout } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
+import ChangePinModal from './ChangePinModal';
 
 export default function UserMenu() {
   const { user, role } = useAuth();
   const [open, setOpen] = useState(false);
+  const [isChangePinOpen, setIsChangePinOpen] = useState(false);
   const ref = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -63,6 +65,14 @@ export default function UserMenu() {
           </div>
           <button
             role="menuitem"
+            onClick={() => { setOpen(false); setIsChangePinOpen(true); }}
+            className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-brand-50"
+          >
+            <KeyRound size={15} />
+            Change PIN
+          </button>
+          <button
+            role="menuitem"
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-red-600 hover:bg-red-50"
           >
@@ -71,6 +81,7 @@ export default function UserMenu() {
           </button>
         </div>
       )}
+      {isChangePinOpen && <ChangePinModal user={user} onClose={() => setIsChangePinOpen(false)} />}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { loginUser, clearAuthError } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
+import ForgotPinModal from '../components/ForgotPinModal';
 
 export default function Login({ portal = 'customer' }) {
   const dispatch = useDispatch();
@@ -15,6 +16,7 @@ export default function Login({ portal = 'customer' }) {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [supportMessage, setSupportMessage] = useState('');
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const isLoading = status === 'loading';
   const isCustomer = portal === 'customer';
@@ -130,7 +132,7 @@ export default function Login({ portal = 'customer' }) {
               </label>
               <button
                 type="button"
-                onClick={() => setSupportMessage(isCustomer ? 'To reset your PIN, please visit our website or contact SokoCredit Support.' : 'To reset your PIN, please contact SokoCredit Support.')}
+                onClick={() => setIsForgotOpen(true)}
                 className="text-brand-600 font-medium hover:underline"
               >
                 Forgot password?
@@ -188,6 +190,7 @@ export default function Login({ portal = 'customer' }) {
           </p>
         </div>
       </div>
+      {isForgotOpen && <ForgotPinModal portal={portal} onClose={() => setIsForgotOpen(false)} />}
     </div>
   );
 }
