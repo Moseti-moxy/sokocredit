@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, Landmark, Settings, LogOut } from 'lucide-react';
+import { ChevronDown, Settings, LogOut } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
@@ -43,9 +43,7 @@ export default function NavDropdown() {
         aria-label="Navigation menu"
         aria-expanded={isOpen}
       >
-        <div className="w-5 h-5 rounded-md bg-brand-500 flex items-center justify-center text-white">
-          <Landmark size={12} />
-        </div>
+        <img src="/logo.svg" alt="" aria-hidden="true" width={28} height={28} className="h-7 w-7 rounded-md" />
         <span className="hidden sm:inline text-sm font-medium text-slate-700">Menu</span>
         <ChevronDown size={18} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -56,9 +54,7 @@ export default function NavDropdown() {
           {/* Header */}
           <div className="px-5 py-3 border-b border-brand-50">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-md bg-brand-500 flex items-center justify-center text-white">
-                <Landmark size={14} />
-              </div>
+              <img src="/logo.svg" alt="SokoCredit logo" width={32} height={32} className="h-8 w-8 rounded-lg" />
               <span className="font-display font-semibold text-brand-700">SokoCredit</span>
             </div>
             {user && (

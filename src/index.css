@@ -69,19 +69,6 @@ input::placeholder, textarea::placeholder {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* The customer onboarding card carries the same market image as sign-in.
-   The gradient keeps the registration title readable without muddying the
-   photo of the trader and her stall. */
-body.signup-page main > div > div:first-child {
-  min-height: 10rem;
-  align-items: flex-start;
-  background-image:
-    linear-gradient(90deg, rgb(37 79 28 / 0.84), rgb(37 79 28 / 0.08)),
-    url('/market-trader-sokocredit.png');
-  background-position: 42% 34%;
-  background-size: cover;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

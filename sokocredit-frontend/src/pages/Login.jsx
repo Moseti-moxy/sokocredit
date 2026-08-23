@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Landmark, User, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { loginUser, clearAuthError } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
 
@@ -17,6 +17,7 @@ export default function Login({ portal = 'customer' }) {
   const [supportMessage, setSupportMessage] = useState('');
 
   const isLoading = status === 'loading';
+  const isCustomer = portal === 'customer';
 
   // Already signed in (or just signed in) -> send them where they were
   // headed, or the dashboard by default.
@@ -33,7 +34,12 @@ export default function Login({ portal = 'customer' }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    dispatch(loginUser({ identifier, password, remember, portal }));
+    dispatch(loginUser({ 
+      identifier, 
+      password, 
+      remember, 
+      portal
+    }));
   }
 
   return (
@@ -41,11 +47,12 @@ export default function Login({ portal = 'customer' }) {
       {/* Hero image - hidden on mobile to keep the form the priority there */}
       <div className="hidden lg:block relative bg-brand-900">
         <img
-          src="/market-traders.jpg"
-          alt="Market trader standing beside fresh produce"
-          className="absolute inset-0 w-full h-full object-cover opacity-80"
+          src="/signup-market-trader.png"
+          alt="SokoCredit customer at her fresh-produce market stall"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: '42% center' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-900/90 via-brand-900/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-900/75 via-brand-900/10 to-transparent" />
         <div className="relative h-full flex flex-col justify-end p-10 text-white">
           <h2 className="font-display text-2xl font-semibold mb-2">Empowering Market Traders</h2>
           <p className="text-brand-100 text-sm max-w-sm">
@@ -57,14 +64,12 @@ export default function Login({ portal = 'customer' }) {
       <div className="flex flex-col justify-center bg-white px-6 py-12 sm:px-12 lg:px-16">
         <div className="w-full max-w-sm mx-auto">
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white">
-              <Landmark size={18} />
-            </div>
+            <img src="/logo.svg" alt="SokoCredit logo" width={32} height={32} className="h-8 w-8 rounded-lg" />
             <span className="font-display font-semibold text-lg text-brand-700">SokoCredit</span>
           </div>
 
           <h1 className="font-display text-2xl font-semibold text-slate-900 mb-1">{portal === 'staff' ? 'Staff sign in' : 'Customer sign in'}</h1>
-          <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Agents sign in with their email and PIN. Administrators use the same secure staff portal.' : 'Use your Kenyan National ID number and PIN to check your SokoCredit account.'}</p>
+          <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Agents sign in with their email and PIN. Administrators use the same secure staff portal.' : 'Sign in with your registered email or National ID number and your PIN.'}</p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
@@ -73,18 +78,23 @@ export default function Login({ portal = 'customer' }) {
               </div>
             )}
             <div>
-              <label htmlFor="identifier" className="block text-xs font-medium text-slate-500 mb-1.5">{portal === 'staff' ? 'Email' : 'Kenyan National ID Number'}</label>
+              <label htmlFor="identifier" className="block text-xs font-medium text-slate-500 mb-1.5">
+                {portal === 'staff' ? 'Email' : 'Email or National ID Number'}
+              </label>
               <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   id="identifier"
                   name="identifier"
+                  type="text"
                   autoComplete="username"
                   value={identifier}
-                  onChange={(e) => setIdentifier(portal === 'staff' ? e.target.value : e.target.value.replace(/\D/g, ''))}
-                  inputMode={portal === 'staff' ? undefined : 'numeric'}
-                  maxLength={portal === 'staff' ? undefined : 8}
-                  placeholder={portal === 'staff' ? 'name@sokocredit.co.ke' : 'e.g. 29481029'}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder={
+                    portal === 'staff' 
+                      ? 'name@sokocredit.co.ke' 
+                      : 'your@email.com or 29481029'
+                  }
                   required
                   className="w-full pl-9 pr-3 py-3 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
@@ -120,12 +130,24 @@ export default function Login({ portal = 'customer' }) {
               </label>
               <button
                 type="button"
-                onClick={() => setSupportMessage('To reset your PIN, please contact SokoCredit Support.')}
+                onClick={() => setSupportMessage(isCustomer && loginMethod === 'email' ? 'To reset your PIN, please visit our website or contact SokoCredit Support.' : 'To reset your PIN, please contact SokoCredit Support.')}
                 className="text-brand-600 font-medium hover:underline"
               >
                 Forgot password?
               </button>
             </div>
+
+            {/* Helpful info about login methods */}
+            {isCustomer && (
+              <div className="text-xs text-slate-500 bg-brand-50 rounded-lg p-3 mt-4">
+                <p className="font-medium text-slate-600 mb-1">Login Tips:</p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>Use your registered email or 8-digit National ID—whichever you prefer</li>
+                  <li>Both identifiers access the same account</li>
+                  <li>Keep your credentials secure</li>
+                </ul>
+              </div>
+            )}
             <button
               type="submit"
               disabled={isLoading}

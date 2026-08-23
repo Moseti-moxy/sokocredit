@@ -1,5 +1,6 @@
 import { Plus, Star, Link2 } from 'lucide-react';
 import AppShell from '../components/AppShell';
+import LanguageSettings from '../components/LanguageSettings';
 import { fieldAgents, loanParameterDefaults, integrationStatus } from '../data/mockData';
 import { formatKES } from '../utils/format';
 
@@ -81,6 +82,8 @@ export default function Settings() {
         </div>
 
         <div className="space-y-5">
+          <LanguageSettings />
+
           <div className="bg-white rounded-2xl border border-brand-100 p-5">
             <h2 className="font-display font-semibold text-slate-900 mb-4">Loan Parameter Defaults</h2>
             <div className="space-y-4">

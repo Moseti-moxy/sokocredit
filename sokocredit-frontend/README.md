@@ -1,79 +1,422 @@
 # SokoCredit — Agent Frontend
 
-React + Redux Toolkit frontend for the SokoCredit agent portal, built responsive
-from mobile through tablet to desktop (Tailwind v4 + `@tailwindcss/vite`).
+SokoCredit is a responsive React-based agent portal for managing customers, loans, repayments, risk, communications, and other microfinance operations.
 
-## Getting started
+The frontend is built with React, Redux Toolkit, Tailwind CSS v4, and Vite. It is currently designed to work with mock data and can be connected to a Flask backend through the configured API layer.
+
+## Features
+
+* Customer registration and KYC validation
+* Customer and loan management
+* Loan eligibility and application tracking
+* Loan approval, rejection, and repayment workflows
+* Loan renewal recommendations
+* Risk management and analytics
+* Credit Reference Bureau (CRB) checks
+* Inventory financing
+* Business registration verification
+* Customer location management
+* WhatsApp, SMS, and email communication interfaces
+* Role-based navigation and access
+* Multi-language support
+* Responsive layouts for mobile, tablet, and desktop
+* Audit logging and activity monitoring
+
+## Tech Stack
+
+| Technology      | Purpose                          |
+| --------------- | -------------------------------- |
+| React           | Frontend framework               |
+| Redux Toolkit   | Application state management     |
+| Tailwind CSS v4 | Styling and responsive design    |
+| Vite            | Development and build tooling    |
+| Lucide React    | UI icons                         |
+| Flask           | Planned backend API              |
+| Mock Data       | Frontend development and testing |
+
+## Getting Started
+
+### Prerequisites
+
+* Node.js
+* npm
+
+### Installation
 
 ```bash
+git clone <repository-url>
+cd sokocredit-agent-frontend
 npm install
-npm run dev      # local dev server
-npm run build    # production build -> dist/
 ```
 
-## Structure
+### Development
 
+```bash
+npm run dev
 ```
+
+The development server will be available at the URL provided by Vite.
+
+### Production Build
+
+```bash
+npm run build
+```
+
+The production build will be generated in:
+
+```text
+dist/
+```
+
+## Project Structure
+
+```text
 src/
-  app/store.js              Redux store
-  features/ui/               nav drawer open/close state (mobile/tablet)
-  features/customers/        customer list + selected customer
-  features/loans/            loan list + status filter
-  data/mockData.js           placeholder data — swap for Flask API calls
-  components/
-    AppShell.jsx              layout: sidebar (desktop) + drawer (mobile/tablet)
-                               + bottom tab bar (mobile) wrapping every page
-    Sidebar.jsx / NavDrawer.jsx / MobileTabBar.jsx / TopBar.jsx
-    StatCard.jsx, CustomerDetail.jsx
-  pages/
-    Dashboard.jsx, Customers.jsx, Loans.jsx, Analytics.jsx,
-    RiskManagement.jsx, Settings.jsx, AuditLog.jsx, Login.jsx, Signup.jsx
+├── app/
+│   └── store.js
+│
+├── components/
+│   ├── AppShell.jsx
+│   ├── Sidebar.jsx
+│   ├── NavDrawer.jsx
+│   ├── MobileTabBar.jsx
+│   ├── TopBar.jsx
+│   ├── StatCard.jsx
+│   ├── CustomerDetail.jsx
+│   ├── LanguageSettings.jsx
+│   └── navConfig.js
+│
+├── features/
+│   ├── ui/
+│   ├── customers/
+│   ├── loans/
+│   ├── crb/
+│   ├── inventory/
+│   ├── communications/
+│   ├── location/
+│   └── business/
+│
+├── pages/
+│   ├── Dashboard.jsx
+│   ├── Customers.jsx
+│   ├── Loans.jsx
+│   ├── Analytics.jsx
+│   ├── RiskManagement.jsx
+│   ├── Settings.jsx
+│   ├── AuditLog.jsx
+│   ├── Login.jsx
+│   ├── Signup.jsx
+│   ├── CRBChecks.jsx
+│   ├── InventoryFinancing.jsx
+│   ├── Communications.jsx
+│   ├── CustomerLocation.jsx
+│   ├── BusinessRegistry.jsx
+│   └── LoanRenewals.jsx
+│
+├── data/
+│   └── mockData.js
+│
+└── utils/
+    └── i18n.js
 ```
 
-## Responsive approach
+## Application Modules
 
-- **Breakpoints**: mobile <640px (`sm`), tablet 640–1024px, desktop 1024px+ (`lg`).
-- **Navigation**: persistent sidebar on desktop (`lg:flex`), a slide-out drawer
-  triggered by the hamburger in the top bar on mobile/tablet, plus a 5-icon
-  bottom tab bar on mobile only (`lg:hidden`).
-- **Tables → cards**: every data table (loans, audit log, customers, risk
-  accounts) renders as a table from `md`/`xl` up and as stacked cards below
-  that — check each page for the exact breakpoint used, since table density
-  varies (e.g. the Loans table needs more horizontal room, so it switches at
-  `xl` instead of `md`).
-- **Grids**: stat cards use `grid-cols-2` on mobile and `lg:grid-cols-4` on
-  desktop so nothing overflows a small screen.
-- Redux `ui` slice only tracks whether the mobile drawer is open — everything
-  else (which layout renders) is pure CSS via Tailwind breakpoints, so there's
-  no JS-based screen-width detection to keep in sync.
+### Customer Management
 
-## Frontend-only demo capabilities
+The customer management module provides functionality for registering and managing customers, including:
 
-- Customer sign-up validates KYC, market, next-of-kin, customer ID, and PIN fields.
-- Customer loan requests include a transparent estimated eligibility amount and
-  remain visible through pending, approved, rejected, and repayment stages.
-- Admins, agents, and loan officers receive persistent in-app notification alerts.
-- Staff can review applications, record simulated M-Pesa/cash repayments,
-  manage schedules, and record reminders.
-- Analytics, audit views, and role-restricted navigation are available with the
-  project’s local mock data.
+* KYC information
+* Customer identification
+* Market information
+* Next-of-kin details
+* Customer profiles
+* Customer loan history
 
-## Before production
+### Loan Management
 
-This project deliberately has no backend yet. Browser storage, demo credentials,
-M-Pesa references, notifications, and eligibility calculations are simulations;
-they are not secure or shared between devices. Before handling real customers or
-money, add server-side authentication and authorization, a database, encrypted
-secrets, M-Pesa API verification, SMS/email delivery, audit logging, rate
-limiting, backups, and server-side validation.
+Agents and loan officers can manage the complete loan lifecycle:
 
-## Deployment checklist
+```text
+Application → Review → Approval/Rejection → Repayment → Completion
+```
 
-1. Set `VITE_USE_MOCK_AUTH=false` and configure the production API base URL.
-2. Run `npm ci`, `npm run lint`, `npm test`, and `npm run build` in CI.
-3. Deploy the generated `dist/` directory to a static host with SPA route
-   fallback enabled.
-4. Keep all API keys and payment credentials only on the server—never in Vite
-   variables exposed to the browser.
-5. Add error monitoring and test customer, staff, admin, and payment flows in
-   a staging environment before release.
+The module supports loan applications, eligibility estimates, repayment schedules, payment records, reminders, and renewal recommendations.
+
+### Risk Management
+
+Risk management provides tools for reviewing customer and loan information to support lending decisions.
+
+### Credit Reference Bureau
+
+The CRB module provides the frontend interface for credit verification and credit report management.
+
+Planned API endpoints include:
+
+```text
+POST /api/crb/check
+POST /api/crb/sync
+GET  /api/crb/status
+```
+
+### Inventory Financing
+
+Inventory financing allows staff to monitor stock purchases financed through SokoCredit.
+
+Features include:
+
+* Financing amounts
+* Stock purchases
+* Sold units
+* Repayment status
+* Completion tracking
+
+Example API endpoints:
+
+```text
+POST /api/inventory/finance
+GET  /api/inventory/tracking/{customerId}
+PUT  /api/inventory/{inventoryId}
+```
+
+### Communications
+
+The communications module provides a unified interface for customer communication.
+
+Supported channels include:
+
+* WhatsApp
+* SMS
+* Email
+
+Example endpoints:
+
+```text
+POST /api/whatsapp/send
+POST /api/whatsapp/loan-notification
+GET  /api/whatsapp/history/{customerId}
+```
+
+### Location Management
+
+The location module is designed to support field-agent operations through:
+
+* Customer location tracking
+* Location history
+* Route optimization
+* Geofence monitoring
+
+Example endpoints:
+
+```text
+POST /api/gps/track
+GET  /api/gps/location/{customerId}
+POST /api/gps/optimize-route
+```
+
+### Business Verification
+
+The business registry module provides an interface for verifying customer businesses and linking verified businesses to customer accounts.
+
+Supported business types include:
+
+* Sole proprietorship
+* Partnership
+* Limited company
+
+### Loan Renewals
+
+The loan renewal module analyzes repayment history and provides renewal recommendations.
+
+Features include:
+
+* Renewal eligibility
+* Suggested renewal amounts
+* Payment history
+* Renewal requests
+* Renewal history
+
+## Role-Based Access
+
+The interface supports different application roles:
+
+| Role         | Access                                                                    |
+| ------------ | ------------------------------------------------------------------------- |
+| Admin        | Full system access                                                        |
+| Agent        | Customer, loan, risk, communication and field operations                  |
+| Loan Officer | Loan, inventory, renewal and reporting functions                          |
+| Customer     | Personal loans, repayments, notifications and available customer services |
+
+Frontend role restrictions are intended for interface control. Authorization for protected resources must be enforced by the backend.
+
+## Responsive Design
+
+The application is designed for mobile, tablet, and desktop environments.
+
+| Screen  | Navigation                 | Data Layout             |
+| ------- | -------------------------- | ----------------------- |
+| Mobile  | Bottom navigation + drawer | Cards                   |
+| Tablet  | Drawer navigation          | Responsive cards/tables |
+| Desktop | Persistent sidebar         | Tables                  |
+
+Tailwind CSS breakpoints are used to control layouts rather than JavaScript-based screen-width detection.
+
+Statistical cards use responsive grids, while data-heavy pages switch from tables to stacked cards on smaller screens.
+
+## Multi-Language Support
+
+The application supports:
+
+* English
+* Swahili
+* Dholuo
+* Gikuyu
+* Kikamba
+
+Language preferences are persisted locally and can be changed from the Settings page.
+
+Translations are managed through:
+
+```text
+src/utils/i18n.js
+```
+
+## Configuration
+
+Create a `.env` file for local development:
+
+```env
+VITE_USE_MOCK_AUTH=true
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+For a backend-connected environment:
+
+```env
+VITE_USE_MOCK_AUTH=false
+VITE_API_BASE_URL=https://your-api-domain.com
+```
+
+API requests are expected to use the configured API base URL:
+
+```text
+${VITE_API_BASE_URL}/api/
+```
+
+## Current Architecture
+
+The current version is frontend-focused and uses local mock data for demonstration.
+
+The following functionality is currently simulated:
+
+* Authentication
+* Customer data
+* Loan data
+* Eligibility calculations
+* Notifications
+* M-Pesa/cash repayment records
+* Browser storage
+
+The application architecture is designed so these implementations can be replaced with backend API calls without restructuring the main UI.
+
+## Backend Integration
+
+The planned backend is a Flask API responsible for:
+
+* Authentication and authorization
+* Customer data
+* Loan processing
+* Database operations
+* Payment verification
+* CRB communication
+* Business verification
+* Notifications
+* Audit logging
+* Location services
+
+Example API structure:
+
+```text
+/api/
+├── auth/
+├── customers/
+├── loans/
+├── repayments/
+├── crb/
+├── inventory/
+├── whatsapp/
+├── gps/
+├── business-registry/
+└── loan-renewal/
+```
+
+## Development
+
+Run the following commands before committing changes:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+For CI environments:
+
+```bash
+npm ci
+npm run lint
+npm test
+npm run build
+```
+
+## Production Considerations
+
+This project is currently a frontend implementation and should not be used to process real customer or financial data until the backend and security infrastructure are implemented.
+
+Before production deployment, the system requires:
+
+* Server-side authentication
+* Server-side authorization
+* Secure database storage
+* Server-side validation
+* Secure M-Pesa transaction verification
+* Protected API credentials
+* Audit logging
+* Rate limiting
+* Backups
+* Error monitoring
+* Secure session management
+* Appropriate data-protection and consent controls
+
+Payment credentials, API secrets, and other sensitive information must remain on the server and must not be exposed through Vite client-side environment variables.
+
+## Deployment
+
+Build the application:
+
+```bash
+npm run build
+```
+
+Deploy the generated `dist/` directory to a static hosting provider configured with SPA route fallback.
+
+Before deployment:
+
+1. Configure the production API URL.
+2. Disable mock authentication.
+3. Verify backend authentication and authorization.
+4. Run the test suite.
+5. Test customer, agent, loan officer, and admin workflows.
+6. Verify responsive layouts.
+7. Test payment and notification integrations in a staging environment.
+
+## Project Status
+
+The SokoCredit Agent Frontend currently provides the complete frontend structure and interfaces for the core agent portal functionality.
+
+Backend services and external integrations are the next stage of development.
+
+## License
+
+This project is currently intended for development and demonstration purposes.

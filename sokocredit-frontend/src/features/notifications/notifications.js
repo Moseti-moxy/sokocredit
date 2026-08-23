@@ -1,3 +1,6 @@
+import { store } from '../../app/store';
+import { createCustomerNotification as addCommunicationNotification } from '../communications/communicationsSlice';
+
 const NOTIFICATIONS_STORAGE_KEY = 'sokocredit-notifications-v1';
 const STAFF_ROLES = ['admin', 'agent', 'loan_officer'];
 
@@ -34,6 +37,25 @@ export function createCustomerNotification({ customerId, title, message, loanId 
   if (!customerId) return;
   const notification = { id: `NTF-${Date.now()}`, roles: ['customer'], customerId, title, message, loanId, createdAt: new Date().toISOString(), readBy: [] };
   writeAll([notification, ...readAll()].slice(0, 100));
+
+  // The legacy bell remains available while the role-based Customer Messages
+  // page receives the same account event in its own, customer-only inbox.
+  const type = title === 'Loan request approved'
+    ? 'loan_approved'
+    : title === 'Loan request update'
+      ? 'loan_rejected'
+      : title === 'Loan disbursed'
+        ? 'loan_disbursed'
+        : title === 'Repayment reminder'
+          ? 'payment_reminder'
+          : 'account_update';
+  store.dispatch(addCommunicationNotification({
+    userId: customerId,
+    type,
+    title,
+    body: message,
+    refId: loanId || null,
+  }));
 }
 
 export function markAllNotificationsRead(role) {

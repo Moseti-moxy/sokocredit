@@ -18,6 +18,15 @@ const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 const LoanOfficerDashboard = lazy(() => import('./pages/LoanOfficerDashboard'));
 const LoanOfficers = lazy(() => import('./pages/LoanOfficers'));
 const Chamas = lazy(() => import('./pages/Chamas'));
+const InventoryFinancing = lazy(() => import('./pages/InventoryFinancing'));
+const CRBChecks = lazy(() => import('./pages/CRBChecks'));
+const LoanRenewals = lazy(() => import('./pages/LoanRenewals'));
+const CustomerLocation = lazy(() => import('./pages/CustomerLocation'));
+const BusinessRegistry = lazy(() => import('./pages/BusinessRegistry'));
+// Role-specific communication pages
+const CustomerMessages = lazy(() => import('./pages/CustomerMessages'));
+const AgentSupportInbox = lazy(() => import('./pages/AgentSupportInbox'));
+const AdminCommunicationCenter = lazy(() => import('./pages/AdminCommunicationCenter'));
 
 function Home() {
   const { role } = useAuth();
@@ -42,9 +51,25 @@ export default function App() {
           <Route path="/customers/new" element={<NewCustomer />} />
           <Route path="/chamas" element={<Chamas />} />
           <Route path="/loans" element={<LoanManagementPage />} />
+          <Route path="/loan-renewals" element={<LoanRenewals />} />
+          <Route path="/inventory" element={<InventoryFinancing />} />
+          <Route path="/crb-checks" element={<CRBChecks />} />
+          <Route path="/location" element={<CustomerLocation />} />
+          <Route path="/business-registry" element={<BusinessRegistry />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/risk" element={<RiskManagement />} />
+        </Route>
+
+        {/* Role-specific communication pages: links and routes are both scoped. */}
+        <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
+          <Route path="/messages" element={<CustomerMessages />} />
+        </Route>
+        <Route element={<ProtectedRoute allowedRoles={['agent']} />}>
+          <Route path="/customer-support" element={<AgentSupportInbox />} />
+        </Route>
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/communication-center" element={<AdminCommunicationCenter />} />
         </Route>
 
         {/* Admin-only — agents get bounced back to the dashboard */}

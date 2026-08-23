@@ -3,9 +3,10 @@ import { Banknote, CalendarDays, CheckCircle2, CircleDollarSign, CreditCard, Sen
 import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../hooks/useAuth';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { generateSchedule, money } from '../features/loans/api/loansApi';
 import { createLoanRequestNotifications } from '../features/notifications/notifications';
+import { createCustomerNotification } from '../features/communications/communicationsSlice';
 
 const LOANS_STORAGE_KEY = 'sokocredit-loans-v2';
 
@@ -24,6 +25,7 @@ function saveApplication(application) {
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
+  const dispatch = useDispatch();
   const customers = useSelector((state) => state.customers.list);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [applications, setApplications] = useState(() => getApplications(user?.id));
@@ -54,11 +56,19 @@ export default function CustomerDashboard() {
     const application = { id: `L-${Date.now().toString().slice(-6)}`, customerId: user?.id, customer: customerName, initials: customerName.split(' ').map((name) => name[0]).join('').slice(0, 2).toUpperCase(), business: user?.business || 'Market trader', amount, interestRate: 10, duration, frequency: form.frequency, purpose: form.purpose.trim(), loanType: 'individual', chamaName, chamaMemberCount, paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval', appliedAt: new Date().toISOString().slice(0, 10), schedule: generateSchedule({ amount, interestRate: 10, duration, frequency: form.frequency }) };
     saveApplication(application);
     createLoanRequestNotifications(application);
+    dispatch(createCustomerNotification({
+      userId: user?.id,
+      type: 'application_received',
+      title: 'Loan Application Received',
+      body: `We have received your loan request for KES ${amount.toLocaleString()}. Our team will review it and update you shortly.`,
+      refId: application.id,
+      deliveryChannel: 'WhatsApp',
+    }));
     setApplications((current) => [application, ...current]); setIsRequestOpen(false); setForm({ amount: '', purpose: '', duration: '3', frequency: 'monthly' });
   }
 
   return <AppShell title={`Welcome, ${user?.name?.split(' ')[0] || 'Customer'}`} subtitle="Your SokoCredit account overview">
-    <div className="rounded-2xl bg-brand-700 p-6 text-white sm:p-8"><p className="text-sm text-brand-100">Kenyan National ID Number</p><p className="mt-1 font-display text-xl font-semibold">{user?.id}</p><div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm text-brand-100">View your active loan, repayment dates, and account activity in one simple place.</p><button type="button" onClick={() => setIsRequestOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"><Banknote size={18} /> Request a loan</button></div></div>
+    <div className="rounded-2xl bg-brand-700 p-6 text-white sm:p-8"><p className="text-sm text-brand-100">Customer ID</p><p className="mt-1 font-display text-xl font-semibold">{user?.id}</p><div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm text-brand-100">View your active loan, repayment dates, and account activity in one simple place.</p><button type="button" onClick={() => setIsRequestOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"><Banknote size={18} /> Request a loan</button></div></div>
     {pendingApplication && <section className="mt-6 flex gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800"><CheckCircle2 className="mt-0.5 shrink-0 text-brand-600" size={20} /><div><p className="font-semibold">Your loan request is being reviewed</p><p className="mt-1">KES {money(pendingApplication.amount)} for {pendingApplication.purpose}. We will update you once an agent has reviewed it.</p></div></section>}
     <div className="mt-6 grid gap-4 sm:grid-cols-3"><StatCard label="Active loan" value="KES 45,000" deltaLabel="Current balance" icon={CreditCard} /><StatCard label="Next repayment" value="KES 3,750" deltaLabel="Due 28 Aug 2026" icon={CalendarDays} /><StatCard label="Account status" value="Active" deltaLabel="Payments up to date" icon={CircleDollarSign} /></div>
     <section className="mt-6 rounded-2xl border border-brand-100 bg-white p-5"><h2 className="font-display font-semibold text-slate-900">Your Chama</h2><p className="mt-2 text-sm text-slate-500">{user?.chama && user.chama !== 'No Chama / Individual Borrower' ? `You are registered with ${user.chama}. Your group affiliation is included in loan assessment.` : 'You are registered as an individual borrower. Ask an agent to update your Chama affiliation if this changes.'}</p></section>
