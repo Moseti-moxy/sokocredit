@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from .extensions import db
+from .security import ROLES, hash_password, verify_password
 
 
 def new_id():
@@ -10,6 +11,39 @@ def new_id():
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    __table_args__ = (
+        db.CheckConstraint(f"role IN ({', '.join(repr(r) for r in ROLES)})", name='ck_users_role'),
+    )
+
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    email = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    full_name = db.Column(db.String(150), nullable=False)
+    role = db.Column(db.String(16), nullable=False, default='agent')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    def set_password(self, password):
+        self.password_hash = hash_password(password)
+
+    def check_password(self, password):
+        return verify_password(password, self.password_hash)
+
+
+class TokenBlocklist(db.Model):
+    __tablename__ = 'token_blocklist'
+
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), nullable=False, unique=True, index=True)
+    token_type = db.Column(db.String(10), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
 
 
 class Loan(db.Model):
