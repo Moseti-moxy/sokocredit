@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, jsonify, request
 
@@ -30,6 +30,20 @@ def body():
 
 def loan_or_404(loan_id):
     return db.session.get(Loan, loan_id)
+
+
+def outstanding_balance(loan):
+    return sum((item.amount_due - item.amount_paid for item in loan.repayment_schedule), Decimal('0'))
+
+
+def serialize_repayment(repayment):
+    return {
+        'id': repayment.id,
+        'amount': float(repayment.amount),
+        'method': repayment.method,
+        'reference': repayment.reference,
+        'paidAt': repayment.paid_at.isoformat(),
+    }
 
 
 def apply_terms(loan, values):
@@ -148,7 +162,72 @@ def repayment_schedule(loan_id):
     if not loan:
         return error('Loan not found.', 404)
     items = [{'installment': i.installment, 'dueDate': i.due_date.isoformat(), 'amountDue': float(i.amount_due), 'amountPaid': float(i.amount_paid), 'status': i.status} for i in loan.repayment_schedule]
-    return jsonify(repaymentSchedule=items, outstandingBalance=float(sum((i.amount_due - i.amount_paid for i in loan.repayment_schedule), Decimal('0'))))
+    return jsonify(repaymentSchedule=items, outstandingBalance=float(outstanding_balance(loan)))
+
+
+@api.post('/loans/<loan_id>/repayments')
+def record_repayment(loan_id):
+    loan = loan_or_404(loan_id)
+    values = body()
+    if not loan:
+        return error('Loan not found.', 404)
+    if loan.status != 'ACTIVE':
+        return error('Only active loans can receive repayments.', 409)
+
+    try:
+        amount = decimal(values.get('amount'))
+    except (InvalidOperation, TypeError, ValueError):
+        return error('Repayment amount must be a valid positive number.')
+    if amount <= 0:
+        return error('Repayment amount must be a valid positive number.')
+
+    balance = outstanding_balance(loan)
+    if balance <= 0:
+        return error('This loan has no outstanding balance.', 409)
+    if amount > balance:
+        return error('Repayment amount cannot exceed the outstanding balance.')
+
+    try:
+        paid_at = datetime.fromisoformat(values['paidAt']) if values.get('paidAt') else datetime.now().astimezone()
+    except (TypeError, ValueError):
+        return error('paidAt must be a valid ISO 8601 datetime.')
+
+    remaining = amount
+    for item in loan.repayment_schedule:
+        due = item.amount_due - item.amount_paid
+        if due <= 0:
+            continue
+        allocated = min(remaining, due)
+        item.amount_paid += allocated
+        remaining -= allocated
+        item.status = 'PAID' if item.amount_paid >= item.amount_due else 'PARTIAL'
+        if remaining == 0:
+            break
+
+    repayment = Repayment(
+        loan=loan,
+        amount=amount,
+        method=values.get('method', 'cash'),
+        reference=values.get('reference'),
+        paid_at=paid_at,
+    )
+    db.session.add(repayment)
+    if outstanding_balance(loan) == 0:
+        loan.status = 'COMPLETED'
+    db.session.commit()
+    return jsonify(
+        repayment=serialize_repayment(repayment),
+        loan=serialize_loan(loan),
+        outstandingBalance=float(outstanding_balance(loan)),
+    ), 201
+
+
+@api.get('/loans/<loan_id>/repayments')
+def repayment_history(loan_id):
+    loan = loan_or_404(loan_id)
+    if not loan:
+        return error('Loan not found.', 404)
+    return jsonify(repayments=[serialize_repayment(repayment) for repayment in loan.repayments])
 
 
 @api.post('/loans/<loan_id>/renew')
@@ -157,7 +236,7 @@ def renew(loan_id):
     values = body()
     if not loan:
         return error('Loan not found.', 404)
-    balance = sum((i.amount_due - i.amount_paid for i in loan.repayment_schedule), Decimal('0'))
+    balance = outstanding_balance(loan)
     if loan.status not in {'ACTIVE', 'COMPLETED'} or (balance > 0 and not values.get('settleOutstandingBalance')):
         return error('An active or completed loan with no outstanding balance is required for renewal.', 409)
     renewal = Loan(customer_id=loan.customer_id, purpose=values.get('purpose', loan.purpose), renewal_of_id=loan.id)
