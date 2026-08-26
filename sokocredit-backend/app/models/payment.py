@@ -8,6 +8,7 @@ class PaymentMethod(str, Enum):
     CASH = "cash"
     MPESA = "mpesa"
     AIRTEL = "airtel"
+    STRIPE = "stripe"
 
 
 class PaymentStatus(str, Enum):
