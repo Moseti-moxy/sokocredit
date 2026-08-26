@@ -10,8 +10,9 @@ from .extensions import cors, db, jwt, migrate
 def create_app(test_config=None):
     load_dotenv()
     app = Flask(__name__)
+    default_db_url = os.getenv('DATABASE_URL', 'sqlite:///sokocredit.db')
     app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URL', 'postgresql+psycopg2://sokocredit_user:change-this-password@localhost:5432/sokocredit'),
+        SQLALCHEMY_DATABASE_URI=default_db_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'development-only-change-me'),
         JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=30),
@@ -55,4 +56,8 @@ def create_app(test_config=None):
     app.register_blueprint(api)
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
+
+    with app.app_context():
+        db.create_all()
+
     return app
