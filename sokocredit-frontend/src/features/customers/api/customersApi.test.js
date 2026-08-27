@@ -10,4 +10,14 @@ describe('fetchCustomers', () => {
 
     vi.restoreAllMocks();
   });
+
+  it('uses demo customers when the Vite API proxy has no backend to reach', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue({ response: { status: 502 } });
+
+    await expect(fetchCustomers()).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'SC-2023-894', name: 'Jane Doe' }),
+    ]));
+
+    vi.restoreAllMocks();
+  });
 });
