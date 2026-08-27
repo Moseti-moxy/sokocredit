@@ -20,6 +20,12 @@ function isApiUnavailable(error) {
   return error?.response?.status === 502 || error?.code === 'ERR_NETWORK';
 }
 
+// On Netlify, an unconfigured `/api` route is handled by the SPA redirect and
+// returns index.html with a 200 status rather than a network error.
+function isSpaHtml(data) {
+  return typeof data === 'string' && /<\/?(?:!doctype|html)\b/i.test(data);
+}
+
 function cloneDemoCustomers() {
   return demoCustomers.map((customer) => ({
     ...customer,
@@ -64,6 +70,7 @@ export async function fetchCustomers(params = {}) {
   try {
     const { data } = await apiClient.get('/customers', { params });
     if (!Array.isArray(data?.customers)) {
+      if (isSpaHtml(data)) return cloneDemoCustomers();
       throw new Error('Customer service returned an invalid response. Check the API URL and try again.');
     }
     return data.customers.map(normalizeCustomer);

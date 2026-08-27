@@ -4,7 +4,7 @@ import { fetchCustomers } from './customersApi';
 
 describe('fetchCustomers', () => {
   it('rejects a response without a customers array with an actionable error', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: '<!doctype html>' });
+    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: {} });
 
     await expect(fetchCustomers()).rejects.toThrow('Customer service returned an invalid response');
 
@@ -13,6 +13,16 @@ describe('fetchCustomers', () => {
 
   it('uses demo customers when the Vite API proxy has no backend to reach', async () => {
     vi.spyOn(apiClient, 'get').mockRejectedValue({ response: { status: 502 } });
+
+    await expect(fetchCustomers()).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'SC-2023-894', name: 'Jane Doe' }),
+    ]));
+
+    vi.restoreAllMocks();
+  });
+
+  it('uses demo customers when Netlify returns the SPA document for an API request', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: '<!doctype html><html><body></body></html>' });
 
     await expect(fetchCustomers()).resolves.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'SC-2023-894', name: 'Jane Doe' }),
