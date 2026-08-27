@@ -24,4 +24,7 @@ def create_app(test_config=None):
     from . import models  # Register SQLAlchemy models before Flask-Migrate discovers them.
     from .routes import api
     app.register_blueprint(api)
+    from customers import customers_bp
+    from customers import models as customer_models
+    app.register_blueprint(customers_bp)
     return app

@@ -5,15 +5,19 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Plus, ChevronLeft, ChevronDown } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import CustomerDetail from '../components/CustomerDetail';
-import { selectCustomer, setSearchTerm } from '../features/customers/customersSlice';
+import { loadCustomerDetail, loadCustomers, selectCustomer, setSearchTerm } from '../features/customers/customersSlice';
 
 export default function Customers() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { list, selectedId, searchTerm } = useSelector((state) => state.customers);
+  const { list, selectedId, searchTerm, status, error } = useSelector((state) => state.customers);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
   const [market, setMarket] = useState('All Markets');
+
+  useEffect(() => {
+    if (status === 'idle') dispatch(loadCustomers());
+  }, [dispatch, status]);
 
   const filtered = list.filter((c) =>
     (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -27,11 +31,13 @@ export default function Customers() {
     const customerId = searchParams.get('customer');
     if (customerId && list.some((customer) => customer.id === customerId) && customerId !== selectedId) {
       dispatch(selectCustomer(customerId));
+      dispatch(loadCustomerDetail(customerId));
     }
   }, [dispatch, list, searchParams, selectedId]);
 
   const handleSelect = (id) => {
     dispatch(selectCustomer(id));
+    dispatch(loadCustomerDetail(id));
     setSearchParams({ customer: id });
     setMobileView('detail');
   };
@@ -66,6 +72,12 @@ export default function Customers() {
             Active Traders <span className="text-slate-400 font-normal">({filtered.length} Total)</span>
           </h2>
           <div className="space-y-2">
+            {status === 'loading' && (
+              <p className="w-full text-center text-sm text-slate-400 py-6">Loading customers…</p>
+            )}
+            {status === 'failed' && (
+              <p className="w-full text-center text-sm text-red-500 py-6">{error} — <button onClick={() => dispatch(loadCustomers())} className="underline">retry</button></p>
+            )}
             {filtered.map((c) => (
               <button
                 key={c.id}

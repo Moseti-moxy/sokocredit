@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { MapPin, Route, Navigation } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import AppShell from '../components/AppShell';
+import '../lib/leafletIcons';
 
 export default function CustomerLocation() {
   const [locations] = useState([
@@ -59,15 +61,42 @@ export default function CustomerLocation() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-brand-100 p-5">
+            <div className="bg-white rounded-2xl border border-brand-100 p-5">
           <h2 className="font-display font-semibold text-slate-900 mb-4">Map View</h2>
-          <div className="w-full h-64 bg-brand-50 rounded-lg flex items-center justify-center text-slate-500">
-            <div className="text-center">
-              <MapPin size={32} className="mx-auto mb-2 text-brand-300" />
-              <p className="text-sm">{mapVisible ? 'Map preview enabled' : 'Select “View Map” to show the map preview'}</p>
-              <p className="text-xs text-slate-400 mt-1">{mapVisible ? locations.filter((location) => location.status === 'Active').map((location) => location.name).join(' · ') : 'Google Maps or OpenStreetMap'}</p>
+          {mapVisible ? (
+            <div className="w-full h-64 rounded-lg overflow-hidden">
+              <MapContainer
+                center={[locations[0].lat, locations[0].lng]}
+                zoom={12}
+                scrollWheelZoom={false}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {locations.map((location) => (
+                  <Marker key={location.id} position={[location.lat, location.lng]}>
+                    <Popup>
+                      <strong>{location.name}</strong>
+                      <br />
+                      {location.market}
+                      <br />
+                      Updated {location.lastUpdate}
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
             </div>
-          </div>
+          ) : (
+            <div className="w-full h-64 bg-brand-50 rounded-lg flex items-center justify-center text-slate-500">
+              <div className="text-center">
+                <MapPin size={32} className="mx-auto mb-2 text-brand-300" />
+                <p className="text-sm">Select "View Map" to show the map preview</p>
+                <p className="text-xs text-slate-400 mt-1">OpenStreetMap</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
