@@ -8,13 +8,21 @@ from .extensions import cors, db, jwt, migrate
 
 
 def create_app(test_config=None):
-    load_dotenv()
+    if not test_config:
+        load_dotenv()
     app = Flask(__name__)
     default_db_url = os.getenv('DATABASE_URL', 'sqlite:///sokocredit.db')
     app.config.from_mapping(
         SQLALCHEMY_DATABASE_URI=default_db_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'development-only-change-me'),
+        MPESA_ENV=os.getenv('MPESA_ENV', 'sandbox'),
+        MPESA_CONSUMER_KEY=os.getenv('MPESA_CONSUMER_KEY'),
+        MPESA_CONSUMER_SECRET=os.getenv('MPESA_CONSUMER_SECRET'),
+        MPESA_SHORTCODE=os.getenv('MPESA_SHORTCODE'),
+        MPESA_PASSKEY=os.getenv('MPESA_PASSKEY'),
+        MPESA_CALLBACK_URL=os.getenv('MPESA_CALLBACK_URL'),
+        MPESA_TRANSACTION_TYPE=os.getenv('MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline'),
         JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=30),
         JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=30),
         JWT_BLOCKLIST_ENABLED=True,

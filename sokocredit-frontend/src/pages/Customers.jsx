@@ -5,7 +5,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Plus, ChevronLeft, ChevronDown } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import CustomerDetail from '../components/CustomerDetail';
-import { selectCustomer, setSearchTerm } from '../features/customers/customersSlice';
+import { replaceCustomers, selectCustomer, setSearchTerm } from '../features/customers/customersSlice';
+import { getCustomers } from '../features/customers/api/customerApi';
 
 export default function Customers() {
   const dispatch = useDispatch();
@@ -22,6 +23,12 @@ export default function Customers() {
   );
 
   const selected = list.find((c) => c.id === selectedId);
+
+  useEffect(() => {
+    getCustomers().then((customers) => {
+      if (customers.length) dispatch(replaceCustomers(customers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))));
+    }).catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     const customerId = searchParams.get('customer');

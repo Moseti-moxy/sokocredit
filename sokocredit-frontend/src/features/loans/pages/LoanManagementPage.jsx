@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import { loans as seedLoans, generateSchedule, applyRepayment } from '../api/loansApi'
+import { approveBackendLoan, createBackendLoan, disburseBackendLoan, getBackendLoans } from '../api/mpesaApi'
+import { getCustomers } from '../../customers/api/customerApi'
+import { replaceCustomers } from '../../customers/customersSlice'
 import NewLoanForm from '../components/NewLoanForm'
 import LoanTable from '../components/LoanTable'
 import { DisbursementQueue, LoanDetail, PendingQueue } from '../components/LoanWorkflow'
@@ -11,8 +14,12 @@ import { createCustomerNotification } from '../../notifications/notifications'
 
 const storageKey = 'sokocredit-loans-v2'
 const savedLoans = () => { try { const data = JSON.parse(localStorage.getItem(storageKey)); return Array.isArray(data) ? data : seedLoans } catch { return seedLoans } }
+const frontendLoan = (loan) => ({
+  id: loan.id, customerId: loan.customerId, customer: loan.customerId, initials: String(loan.customerId || 'CU').slice(0, 2).toUpperCase(), business: loan.purpose || 'Loan customer', amount: Number(loan.amount), interestRate: Number(loan.interestRate), duration: Number(loan.duration), frequency: loan.repaymentFrequency || loan.frequency, purpose: loan.purpose, paid: 0, progress: 0, status: loan.status === 'ACTIVE' ? 'Repaying' : loan.status === 'PENDING' ? 'Pending' : loan.status === 'APPROVED' ? 'Approved' : loan.status, due: 'Scheduled', appliedAt: loan.appliedAt?.slice(0, 10), approvedAt: loan.decision?.decidedAt?.slice(0, 10), schedule: [],
+})
 
 export default function LoanManagementPage() {
+  const dispatch = useDispatch()
   const [searchParams] = useSearchParams()
   const customers = useSelector((state) => state.customers.list)
   const requestedView = searchParams.get('view')
@@ -23,13 +30,26 @@ export default function LoanManagementPage() {
   const [loans, setLoans] = useState(savedLoans); const [search, setSearch] = useState(''); const [status, setStatus] = useState('All Status'); const [notice, setNotice] = useState(null); const [view, setView] = useState(requestedView === 'disburse' ? 'disburse' : 'portfolio'); const [selectedId, setSelectedId] = useState(null); const [confirmation, setConfirmation] = useState(null)
   const role = useSelector((state) => state.auth.role === 'admin' ? 'manager' : 'loan_officer')
   useEffect(() => localStorage.setItem(storageKey, JSON.stringify(loans)), [loans])
+  useEffect(() => {
+    getCustomers().then((backendCustomers) => {
+      if (backendCustomers.length) dispatch(replaceCustomers(backendCustomers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))))
+    }).catch(() => {})
+  }, [dispatch])
+  useEffect(() => {
+    let active = true
+    getBackendLoans().then((backendLoans) => {
+      if (!active || !backendLoans.length) return
+      setLoans(backendLoans.map(frontendLoan))
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
   useEffect(() => { if (!notice) return undefined; const timer = setTimeout(() => setNotice(null), 5000); return () => clearTimeout(timer) }, [notice])
   const shown = useMemo(() => loans.filter((loan) => loan.customer.toLowerCase().includes(search.toLowerCase()) && (status === 'All Status' || (status === 'Overdue' ? loan.status.includes('Overdue') : loan.status === status))), [loans, search, status])
   const update = (id, changes) => setLoans((items) => items.map((loan) => loan.id === id ? { ...loan, ...changes } : loan))
-  const create = (form) => { const customer = customers.find((item) => item.id === form.customerId); const chamaName = form.chamaName || (customer?.chama && customer.chama !== 'No Chama / Individual Borrower' ? customer.chama : ''); const chamaMemberCount = form.chamaMemberCount || (chamaName ? customers.filter((item) => item.chama === chamaName).length : 0); const loan = { id: `L-${Date.now().toString().slice(-5)}`, customerId: form.customerId, customer: form.customer, initials: form.initials, business: form.business, amount: Number(form.amount), interestRate: Number(form.rate), duration: Number(form.duration), frequency: form.frequency, purpose: form.purpose, loanType: form.loanType || 'individual', chamaName, chamaMemberCount, paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval', appliedAt: new Date().toISOString().slice(0, 10), schedule: generateSchedule({ amount: form.amount, interestRate: form.rate, duration: form.duration, frequency: form.frequency }) }; setLoans((items) => [loan, ...items]); setView('pending'); setNotice({ type: 'success', message: `${loan.loanType === 'chama' ? `${chamaName} group` : form.customer} application submitted for review.` }) }
-  const approve = (loan, conditions) => setConfirmation({ title: 'Approve loan application?', message: `${loan.id} will move to the disbursement queue.`, actionLabel: 'Approve loan', confirm: () => { update(loan.id, { status: 'Approved', approvedAt: new Date().toISOString().slice(0, 10), conditions }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Loan request approved', message: `Your request for KES ${loan.amount.toLocaleString()} has been approved and is awaiting disbursement.` }); setNotice({ type: 'success', message: `${loan.id} approved and the customer notified.` }) } })
+  const create = async (form) => { try { const backendLoan = await createBackendLoan({ customerId: form.customerId, amount: Number(form.amount), interestRate: Number(form.rate), duration: Number(form.duration), frequency: form.frequency, purpose: form.purpose }); const loan = { ...frontendLoan(backendLoan), customer: form.customer, initials: form.initials, business: form.business, loanType: form.loanType || 'individual', chamaName: form.chamaName, chamaMemberCount: form.chamaMemberCount, schedule: generateSchedule({ amount: form.amount, interestRate: form.rate, duration: form.duration, frequency: form.frequency }) }; setLoans((items) => [loan, ...items]); setView('pending'); setNotice({ type: 'success', message: `${form.customer} application submitted for review.` }) } catch (requestError) { setNotice({ type: 'error', message: requestError.response?.data?.error || 'Could not submit the loan application.' }) } }
+  const approve = (loan, conditions) => setConfirmation({ title: 'Approve loan application?', message: `${loan.id} will move to the disbursement queue.`, actionLabel: 'Approve loan', confirm: async () => { try { const approved = await approveBackendLoan(loan, conditions); update(loan.id, { ...frontendLoan(approved), customer: loan.customer, business: loan.business }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Loan request approved', message: `Your request for KES ${loan.amount.toLocaleString()} has been approved and is awaiting disbursement.` }); setNotice({ type: 'success', message: `${loan.id} approved and the customer notified.` }) } catch (requestError) { setNotice({ type: 'error', message: requestError.response?.data?.error || 'Could not approve the loan.' }) } } })
   const reject = (loan, reason, notes) => { update(loan.id, { status: 'Rejected', rejectedAt: new Date().toISOString().slice(0, 10), rejectionReason: reason, rejectionNotes: notes }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Loan request update', message: `Your request for KES ${loan.amount.toLocaleString()} was not approved. Reason: ${reason}.` }); setNotice({ type: 'success', message: `${loan.id} was rejected and the customer notified.` }) }
-  const disburse = (loan, details) => setConfirmation({ title: 'Confirm disbursement?', message: `Record a KES ${loan.amount.toLocaleString()} ${details.method} disbursement for ${loan.customer}.`, actionLabel: 'Record disbursement', confirm: () => { update(loan.id, { status: 'Repaying', disbursedAt: details.date, disbursement: details, due: loan.schedule?.[0]?.dueDate || 'Scheduled' }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Loan disbursed', message: `KES ${loan.amount.toLocaleString()} has been disbursed via ${details.method}. Your next repayment is ${loan.schedule?.[0]?.dueDate || 'scheduled'}.` }); setNotice({ type: 'success', message: `${loan.id} disbursed via ${details.method} and the customer notified.` }) } })
+  const disburse = (loan, details) => setConfirmation({ title: 'Confirm disbursement?', message: `Record a KES ${loan.amount.toLocaleString()} ${details.method} disbursement for ${loan.customer}.`, actionLabel: 'Record disbursement', confirm: async () => { try { const disbursed = await disburseBackendLoan(loan, details); update(loan.id, { ...frontendLoan(disbursed), customer: loan.customer, business: loan.business, disbursedAt: details.date, disbursement: details, schedule: loan.schedule }); createCustomerNotification({ customerId: loan.customerId, loanId: loan.id, title: 'Loan disbursed', message: `KES ${loan.amount.toLocaleString()} has been disbursed via ${details.method}. Your next repayment is ${loan.schedule?.[0]?.dueDate || 'scheduled'}.` }); setNotice({ type: 'success', message: `${loan.id} disbursed via ${details.method} and the customer notified.` }) } catch (requestError) { setNotice({ type: 'error', message: requestError.response?.data?.error || 'Could not disburse the loan.' }) } } })
   const saveSchedule = (loan, schedule) => { update(loan.id, { schedule, due: schedule.find((item) => item.status !== 'Paid')?.dueDate || 'Completed' }); setNotice({ type: 'success', message: `${loan.id} repayment schedule updated.` }) }
   const recordRepayment = (loan, payment) => {
     const result = applyRepayment(loan, payment)
