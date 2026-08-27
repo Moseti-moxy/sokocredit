@@ -1,7 +1,13 @@
 import os
 from functools import wraps
 
-import bcrypt
+try:
+    import bcrypt
+except Exception:
+    bcrypt = None
+import hashlib
+import os
+import binascii
 from cryptography.fernet import Fernet, InvalidToken
 from flask import jsonify
 from flask_jwt_extended import get_jwt, verify_jwt_in_request
@@ -11,13 +17,32 @@ ROLES = ('admin', 'lender', 'agent')
 
 
 def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    if bcrypt:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    # fallback: PBKDF2-HMAC-SHA256
+    salt = os.urandom(16)
+    iterations = 100_000
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iterations)
+    return f'pbkdf2_sha256${iterations}${binascii.hexlify(salt).decode()}${binascii.hexlify(dk).decode()}'
 
 
 def verify_password(password, password_hash):
+    if bcrypt:
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+        except (ValueError, AttributeError):
+            return False
+    # fallback verification for pbkdf2_sha256 format
     try:
-        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
-    except (ValueError, AttributeError):
+        algo, iterations_s, salt_hex, hash_hex = password_hash.split('$')
+        if algo != 'pbkdf2_sha256':
+            return False
+        iterations = int(iterations_s)
+        salt = binascii.unhexlify(salt_hex)
+        expected = binascii.unhexlify(hash_hex)
+        dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iterations)
+        return hashlib.compare_digest(dk, expected)
+    except Exception:
         return False
 
 

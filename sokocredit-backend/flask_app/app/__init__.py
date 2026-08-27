@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify
 
 from .extensions import cors, db, jwt, migrate
+from werkzeug.exceptions import HTTPException
+from flask import jsonify
 
 
 def create_app(test_config=None):
@@ -62,10 +64,40 @@ def create_app(test_config=None):
     from .routes import api
     from .user_routes import users_bp
     app.register_blueprint(api)
-    from customers import customers_bp
-    from customers import models as customer_models
-    app.register_blueprint(customers_bp)
+
+    # local customer blueprint (may be added by local changes)
+    try:
+        from customers import customers_bp  # type: ignore
+        from customers import models as customer_models  # type: ignore
+        app.register_blueprint(customers_bp)
+    except Exception:
+        # not all branches include customers blueprint; continue gracefully
+        app.logger.debug('No customers blueprint available.')
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
+
+    # register CLI commands
+    try:
+        from . import cli as _cli
+        app.cli.add_command(_cli.send_overdue_reminders)
+    except Exception:
+        app.logger.debug('No CLI commands to register.')
+
+    # Centralized JSON error handlers
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        response = e.get_response()
+        return jsonify(error=e.description), e.code
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        app.logger.exception('Unhandled exception: %s', e)
+        return jsonify(error='Internal server error'), 500
+
+    # In development or when explicitly requested, create DB tables
+    if app.config.get('FLASK_CREATE_ALL', False) or app.env == 'development':
+        with app.app_context():
+            db.create_all()
 
     return app
