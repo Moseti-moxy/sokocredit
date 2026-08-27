@@ -33,6 +33,30 @@ class Loan(db.Model):
     disbursements = db.relationship('Disbursement', back_populates='loan', cascade='all, delete-orphan', order_by='Disbursement.disbursed_at')
     repayment_schedule = db.relationship('RepaymentScheduleItem', back_populates='loan', cascade='all, delete-orphan', order_by='RepaymentScheduleItem.installment')
     repayments = db.relationship('Repayment', back_populates='loan', cascade='all, delete-orphan', order_by='Repayment.paid_at')
+    mpesa_stk_requests = db.relationship('MpesaStkRequest', back_populates='loan', cascade='all, delete-orphan', order_by='MpesaStkRequest.created_at')
+
+
+class Customer(db.Model):
+    __tablename__ = 'customers'
+
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    name = db.Column(db.String(160), nullable=False)
+    phone_number = db.Column(db.String(16), nullable=False, unique=True)
+    national_id = db.Column(db.String(32), nullable=False, unique=True)
+    business = db.Column(db.String(160), nullable=False)
+    market = db.Column(db.String(160), nullable=False)
+    stall = db.Column(db.String(160), nullable=False)
+    kra_pin = db.Column(db.String(32))
+    years_operating = db.Column(db.Integer, nullable=False, default=0)
+    daily_turnover = db.Column(db.Numeric(12, 2), nullable=False)
+    daily_profit = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    chama = db.Column(db.String(160))
+    next_of_kin = db.Column(db.String(160))
+    relationship = db.Column(db.String(64))
+    next_of_kin_phone = db.Column(db.String(16))
+    appraisal_notes = db.Column(db.Text)
+    status = db.Column(db.String(16), nullable=False, default='ACTIVE')
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class LoanDecision(db.Model):
@@ -88,3 +112,23 @@ class Repayment(db.Model):
     paid_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
     loan = db.relationship('Loan', back_populates='repayments')
+
+
+class MpesaStkRequest(db.Model):
+    __tablename__ = 'mpesa_stk_requests'
+
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    loan_id = db.Column(db.String(36), db.ForeignKey('loans.id'), nullable=False, index=True)
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    phone_number = db.Column(db.String(16), nullable=False)
+    checkout_request_id = db.Column(db.String(100), nullable=False, unique=True)
+    merchant_request_id = db.Column(db.String(100))
+    status = db.Column(db.String(16), nullable=False, default='PENDING', index=True)
+    result_code = db.Column(db.Integer)
+    result_desc = db.Column(db.Text)
+    mpesa_receipt_number = db.Column(db.String(100), unique=True)
+    callback_data = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    loan = db.relationship('Loan', back_populates='mpesa_stk_requests')
