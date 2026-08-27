@@ -141,7 +141,7 @@ def apply_for_loan():
     loan = Loan(customer_id=values['customerId'], purpose=values.get('purpose'))
     try:
         apply_terms(loan, values)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidOperation):
         return error('Provide valid positive amount, duration, interestRate, and repaymentFrequency.')
     db.session.add(loan)
     db.session.commit()
@@ -172,7 +172,7 @@ def approve(loan_id):
     values = body()
     try:
         apply_terms(loan, values)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidOperation):
         return error('Approval terms are invalid.')
     loan.status = 'APPROVED'
     loan.decision = LoanDecision(decision_type='APPROVED', decided_by=values.get('approvedBy'), conditions=values.get('conditions', []))
@@ -204,10 +204,13 @@ def disburse(loan_id):
         return error('Loan not found.', 404)
     if loan.status != 'APPROVED':
         return error('Only approved loans can be disbursed.', 409)
-    amount = decimal(values.get('amount', loan.amount))
+    try:
+        amount = decimal(values.get('amount', loan.amount))
+        disbursed_at = datetime.fromisoformat(values['disbursedAt']) if values.get('disbursedAt') else datetime.now().astimezone()
+    except (ValueError, TypeError, InvalidOperation):
+        return error('Provide a valid amount and disbursedAt.')
     if amount <= 0 or amount > loan.amount:
         return error('Disbursement amount must be positive and cannot exceed the approved amount.')
-    disbursed_at = datetime.fromisoformat(values['disbursedAt']) if values.get('disbursedAt') else datetime.now().astimezone()
     disbursement = Disbursement(loan=loan, amount=amount, method=values.get('method', 'bank_transfer'), reference=values.get('reference'), disbursed_by=values.get('disbursedBy'), disbursed_at=disbursed_at)
     for item in schedule_terms(amount, loan.interest_rate, loan.duration, loan.duration_unit, loan.repayment_frequency, disbursed_at.date()):
         db.session.add(RepaymentScheduleItem(loan=loan, **item))
@@ -393,7 +396,7 @@ def renew(loan_id):
     renewal = Loan(customer_id=loan.customer_id, purpose=values.get('purpose', loan.purpose), renewal_of_id=loan.id)
     try:
         apply_terms(renewal, {**values, 'amount': values.get('amount', loan.amount), 'interestRate': values.get('interestRate', loan.interest_rate), 'duration': values.get('duration', loan.duration), 'durationUnit': values.get('durationUnit', loan.duration_unit), 'repaymentFrequency': values.get('repaymentFrequency', loan.repayment_frequency)})
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidOperation):
         return error('Renewal terms are invalid.')
     db.session.add(renewal)
     db.session.commit()
