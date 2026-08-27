@@ -96,7 +96,8 @@ def create_app(test_config=None):
         return jsonify(error='Internal server error'), 500
 
     # In development or when explicitly requested, create DB tables
-    if app.config.get('FLASK_CREATE_ALL', False) or app.env == 'development':
+    # Use config ENV for Flask 3 compatibility instead of removed `app.env` attribute.
+    if app.config.get('FLASK_CREATE_ALL', False) or app.config.get('ENV') == 'development' or os.getenv('FLASK_ENV') == 'development':
         with app.app_context():
             db.create_all()
 
