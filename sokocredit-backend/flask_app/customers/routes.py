@@ -1,9 +1,11 @@
 from datetime import date
 
 from flask import Blueprint, jsonify, request
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import Loan
+from app.mpesa import MpesaError, normalize_phone_number
 from .models import CUSTOMER_STATUSES, DOCUMENT_TYPES, Customer, Document
 from .scoring import compute_credit_score
 from .storage import delete_customer_file, save_customer_file
@@ -19,6 +21,10 @@ def error(message, status=400):
 
 def body():
     return request.get_json(silent=True) or {}
+
+
+def is_blank(value):
+    return value is None or not str(value).strip()
 
 
 def customer_or_404(customer_id):
@@ -86,7 +92,7 @@ def apply_fields(customer, values):
     if 'fullName' in values:
         customer.full_name = str(values['fullName']).strip()
     if 'phoneNumber' in values:
-        customer.phone_number = str(values['phoneNumber']).strip()
+        customer.phone_number = normalize_phone_number(values['phoneNumber'])
     if 'nationalId' in values:
         customer.national_id = values['nationalId']
     if 'email' in values:
@@ -153,11 +159,25 @@ def create_customer():
         'stallNumber': values.get('stallNumber', values.get('stall')),
         'yearsInBusiness': values.get('yearsInBusiness', values.get('yearsOperating')),
     }
-    missing = [f for f in REQUIRED_FIELDS if not str(values.get(f, '')).strip()]
+    missing = [f for f in REQUIRED_FIELDS if is_blank(values.get(f))]
     if missing:
         return error(f'Missing required field(s): {", ".join(missing)}.')
-    if Customer.query.filter_by(phone_number=values['phoneNumber']).first():
-        return error('A customer with this phone number already exists.', 409)
+
+    try:
+        values['phoneNumber'] = normalize_phone_number(values['phoneNumber'])
+    except MpesaError as exc:
+        return error(str(exc))
+
+    # Phone numbers and national IDs identify one real person. Checking both
+    # prevents the same customer being silently registered twice by different
+    # field officers using different phone-number formats.
+    if Customer.query.filter(
+        db.or_(
+            Customer.phone_number == values['phoneNumber'],
+            Customer.national_id == str(values['nationalId']).strip(),
+        )
+    ).first():
+        return error('A customer with this phone number or national ID already exists.', 409)
 
     customer = Customer(
         full_name=values['fullName'], phone_number=values['phoneNumber'], national_id=values.get('nationalId'),
@@ -166,10 +186,16 @@ def create_customer():
     )
     try:
         apply_fields(customer, values)
-    except (ValueError, TypeError):
+        db.session.add(customer)
+        db.session.commit()
+    except (ValueError, TypeError, MpesaError):
+        db.session.rollback()
         return error('One or more fields are invalid.')
-    db.session.add(customer)
-    db.session.commit()
+    except IntegrityError:
+        # Retain a friendly response if two agents submit the same customer at
+        # exactly the same time.
+        db.session.rollback()
+        return error('A customer with this phone number or national ID already exists.', 409)
     return jsonify(customer=serialize_customer(customer)), 201
 
 
@@ -199,13 +225,23 @@ def update_customer(customer_id):
         return error('Customer not found.', 404)
     values = body()
     new_phone = values.get('phoneNumber')
+    if new_phone:
+        try:
+            new_phone = normalize_phone_number(new_phone)
+            values['phoneNumber'] = new_phone
+        except MpesaError as exc:
+            return error(str(exc))
     if new_phone and new_phone != customer.phone_number and Customer.query.filter_by(phone_number=new_phone).first():
         return error('A customer with this phone number already exists.', 409)
     try:
         apply_fields(customer, values)
     except (ValueError, TypeError):
         return error('One or more fields are invalid.')
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return error('A customer with this phone number or national ID already exists.', 409)
     return jsonify(customer=serialize_customer(customer))
 
 

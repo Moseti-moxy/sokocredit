@@ -16,8 +16,11 @@ export default function Customers() {
   const [market, setMarket] = useState('All Markets');
 
   useEffect(() => {
-    if (status === 'idle') dispatch(loadCustomers());
-  }, [dispatch, status]);
+    // Always get the shared directory when this screen opens. Redux survives
+    // navigation, so only loading while "idle" left an agent seeing an old
+    // list after another agent had registered a customer.
+    dispatch(loadCustomers());
+  }, [dispatch]);
 
   const filtered = list.filter((c) =>
     (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

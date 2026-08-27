@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import { loans as seedLoans, generateSchedule, applyRepayment } from '../api/loansApi'
 import { approveBackendLoan, createBackendLoan, disburseBackendLoan, getBackendLoans } from '../api/mpesaApi'
-import { getCustomers } from '../../customers/api/customerApi'
-import { replaceCustomers } from '../../customers/customersSlice'
+import { loadCustomers } from '../../customers/customersSlice'
 import NewLoanForm from '../components/NewLoanForm'
 import LoanTable from '../components/LoanTable'
 import { DisbursementQueue, LoanDetail, PendingQueue } from '../components/LoanWorkflow'
@@ -30,11 +29,9 @@ export default function LoanManagementPage() {
   const [loans, setLoans] = useState(savedLoans); const [search, setSearch] = useState(''); const [status, setStatus] = useState('All Status'); const [notice, setNotice] = useState(null); const [view, setView] = useState(requestedView === 'disburse' ? 'disburse' : 'portfolio'); const [selectedId, setSelectedId] = useState(null); const [confirmation, setConfirmation] = useState(null)
   const role = useSelector((state) => state.auth.role === 'admin' ? 'manager' : 'loan_officer')
   useEffect(() => localStorage.setItem(storageKey, JSON.stringify(loans)), [loans])
-  useEffect(() => {
-    getCustomers().then((backendCustomers) => {
-      if (backendCustomers.length) dispatch(replaceCustomers(backendCustomers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))))
-    }).catch(() => {})
-  }, [dispatch])
+  // Loan applications must use the same shared customer directory as the
+  // customer screen, never a browser-only or mock list.
+  useEffect(() => { dispatch(loadCustomers()) }, [dispatch])
   useEffect(() => {
     let active = true
     getBackendLoans().then((backendLoans) => {

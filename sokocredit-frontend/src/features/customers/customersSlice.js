@@ -48,7 +48,9 @@ const customersSlice = createSlice({
       .addCase(loadCustomers.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.list = action.payload;
-        if (!state.selectedId && action.payload.length) state.selectedId = action.payload[0].id;
+        if (!action.payload.some((customer) => customer.id === state.selectedId)) {
+          state.selectedId = action.payload[0]?.id || null;
+        }
       })
       .addCase(loadCustomers.rejected, (state, action) => {
         state.status = 'failed';
