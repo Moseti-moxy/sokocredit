@@ -1,9 +1,65 @@
-import { Phone, MapPin, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Phone, MapPin, ArrowDownLeft, ArrowUpRight, FileText, Upload } from 'lucide-react';
 import { formatKES } from '../utils/format';
 import { useNavigate } from 'react-router-dom';
+import { uploadCustomerDocument } from '../features/customers/customersSlice';
+
+const DOCUMENT_TYPES = [
+  { value: 'NATIONAL_ID', label: 'National ID' },
+  { value: 'BUSINESS_PERMIT', label: 'Business Permit' },
+  { value: 'PASSPORT_PHOTO', label: 'Passport Photo' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+function DocumentUpload({ customerId }) {
+  const dispatch = useDispatch();
+  const fileInput = useRef(null);
+  const [documentType, setDocumentType] = useState('NATIONAL_ID');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setUploadError('');
+    try {
+      await dispatch(uploadCustomerDocument({ customerId, file, documentType })).unwrap();
+    } catch (err) {
+      setUploadError(err?.response?.data?.error || 'Upload failed. Use a PDF, JPG, or PNG under 5MB.');
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-3">
+      <select
+        aria-label="Document type"
+        value={documentType}
+        onChange={(e) => setDocumentType(e.target.value)}
+        className="text-sm rounded-lg border border-brand-100 px-2.5 py-2 bg-white text-slate-600"
+      >
+        {DOCUMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+      </select>
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={() => fileInput.current?.click()}
+        className="flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg border border-brand-200 px-3 py-2 text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+      >
+        <Upload size={14} /> {uploading ? 'Uploading…' : 'Upload document'}
+      </button>
+      <input ref={fileInput} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleFile} />
+      {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
+    </div>
+  );
+}
 
 export default function CustomerDetail({ customer }) {
   const navigate = useNavigate();
+  const detailStatus = useSelector((state) => state.customers.detailStatus);
   if (!customer) {
     return (
       <div className="bg-white rounded-2xl border border-brand-100 p-8 text-center text-slate-400 text-sm">
@@ -63,7 +119,9 @@ export default function CustomerDetail({ customer }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-brand-100 p-5 flex flex-col items-center text-center">
-          <p className="text-xs uppercase text-slate-400 mb-2 self-start">Credit Trust Score</p>
+          <p className="text-xs uppercase text-slate-400 mb-2 self-start">
+            Credit Trust Score {detailStatus === 'loading' && <span className="normal-case text-slate-300">· updating…</span>}
+          </p>
           <div className="relative w-28 h-28 flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
               <circle cx="50" cy="50" r="42" fill="none" stroke="#dcecd6" strokeWidth="10" />
@@ -128,6 +186,24 @@ export default function CustomerDetail({ customer }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-brand-100 p-5">
+        <h4 className="font-display font-semibold text-slate-900 text-sm mb-1">Documents</h4>
+        <p className="text-xs text-slate-400 mb-2">National ID, business permit, or a passport photo — PDF, JPG, or PNG, up to 5MB.</p>
+        <div className="space-y-2">
+          {(customer.documents || []).length === 0 && (
+            <p className="text-sm text-slate-400">No documents uploaded yet.</p>
+          )}
+          {(customer.documents || []).map((doc) => (
+            <div key={doc.id} className="flex items-center gap-2.5 text-sm">
+              <FileText size={15} className="text-brand-500 shrink-0" />
+              <span className="text-slate-700 truncate flex-1">{doc.filename}</span>
+              <span className="text-xs text-slate-400 shrink-0">{doc.type.replace('_', ' ')} · {doc.uploadedAt}</span>
+            </div>
+          ))}
+        </div>
+        <DocumentUpload customerId={customer.id} />
       </div>
     </div>
   );

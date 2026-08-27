@@ -96,12 +96,12 @@ def health():
     return {'status': 'ok'}
 
 
-@api.get('/customers')
+@api.get('/legacy/customers')
 def list_customers():
     return jsonify(customers=[serialize_customer(customer) for customer in Customer.query.order_by(Customer.created_at.desc()).all()])
 
 
-@api.post('/customers')
+@api.post('/legacy/customers')
 def create_customer():
     values = body()
     required = ('name', 'phone', 'nationalId', 'business', 'market', 'stall', 'dailyTurnover')

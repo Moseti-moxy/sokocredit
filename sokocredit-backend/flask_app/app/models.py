@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from sqlalchemy.orm import synonym
+
 from .extensions import db
 from .security import ROLES, hash_password, verify_password
 
@@ -91,6 +93,26 @@ class Customer(db.Model):
     appraisal_notes = db.Column(db.Text)
     status = db.Column(db.String(16), nullable=False, default='ACTIVE')
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    # CM's API names map onto the existing persistent customer record so both
+    # features share one table and existing customers remain available.
+    full_name = synonym('name')
+    business_name = synonym('business')
+    stall_number = synonym('stall')
+    years_in_business = synonym('years_operating')
+
+    email = db.Column(db.String(120))
+    gender = db.Column(db.String(16))
+    date_of_birth = db.Column(db.Date)
+    business_type = db.Column(db.String(64))
+    business_registration_number = db.Column(db.String(64))
+    address = db.Column(db.Text)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    seasonal_pattern = db.Column(db.JSON, default=dict)
+    registered_by = db.Column(db.String(100))
+    documents = db.relationship('Document', back_populates='customer', cascade='all, delete-orphan', order_by='Document.uploaded_at')
 
 
 class LoanDecision(db.Model):

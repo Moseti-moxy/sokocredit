@@ -62,6 +62,9 @@ def create_app(test_config=None):
     from .routes import api
     from .user_routes import users_bp
     app.register_blueprint(api)
+    from customers import customers_bp
+    from customers import models as customer_models
+    app.register_blueprint(customers_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
 
