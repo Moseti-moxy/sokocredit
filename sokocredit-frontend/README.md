@@ -313,21 +313,20 @@ Create a `.env` file for local development:
 
 ```env
 VITE_USE_MOCK_AUTH=true
-VITE_API_BASE_URL=http://localhost:5000
+VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
 For a backend-connected environment:
 
 ```env
 VITE_USE_MOCK_AUTH=false
-VITE_API_BASE_URL=https://your-api-domain.com
+VITE_API_BASE_URL=https://your-api-domain.com/api
 ```
 
-API requests are expected to use the configured API base URL:
-
-```text
-${VITE_API_BASE_URL}/api/
-```
+`VITE_API_BASE_URL` must include the `/api` path. For Netlify, add this value
+as a build environment variable before deploying; it is embedded when Vite
+builds the static site. Without it, requests fall back to Netlify's SPA page
+instead of reaching Flask.
 
 ## Current Architecture
 
@@ -428,7 +427,7 @@ Deploy the generated `dist/` directory to a static hosting provider configured w
 
 Before deployment:
 
-1. Configure the production API URL.
+1. Configure `VITE_API_BASE_URL` to the deployed Flask API, including `/api`.
 2. Disable mock authentication.
 3. Verify backend authentication and authorization.
 4. Run the test suite.

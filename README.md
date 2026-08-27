@@ -146,7 +146,7 @@ Create `sokocredit-frontend/.env` when you need to override defaults:
 VITE_USE_MOCK_AUTH=true
 
 # URL of the backend API when mock authentication is disabled.
-VITE_API_BASE_URL=http://localhost:5000
+VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
 When integrating a backend, set `VITE_USE_MOCK_AUTH=false` and provide the deployed API URL. Never place secrets, payment credentials, or private keys in `VITE_` variables because Vite exposes them to the browser.

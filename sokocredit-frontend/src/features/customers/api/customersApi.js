@@ -46,6 +46,9 @@ export function normalizeCustomer(apiCustomer) {
 
 export async function fetchCustomers(params = {}) {
   const { data } = await apiClient.get('/customers', { params });
+  if (!Array.isArray(data?.customers)) {
+    throw new Error('Customer service returned an invalid response. Check the API URL and try again.');
+  }
   return data.customers.map(normalizeCustomer);
 }
 
