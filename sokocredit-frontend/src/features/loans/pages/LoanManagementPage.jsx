@@ -32,7 +32,7 @@ export default function LoanManagementPage() {
   useEffect(() => localStorage.setItem(storageKey, JSON.stringify(loans)), [loans])
   useEffect(() => {
     getCustomers().then((backendCustomers) => {
-      if (backendCustomers.length) dispatch(replaceCustomers(backendCustomers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))))
+      dispatch(replaceCustomers(backendCustomers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))))
     }).catch(() => {})
   }, [dispatch])
   useEffect(() => {

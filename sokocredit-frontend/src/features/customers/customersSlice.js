@@ -1,11 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { customers } from '../../data/mockData';
 
 const customersSlice = createSlice({
   name: 'customers',
   initialState: {
-    list: customers,
-    selectedId: customers[0]?.id ?? null,
+    // Customer records are loaded from the persistent backend database.
+    list: [],
+    selectedId: null,
     searchTerm: '',
   },
   reducers: {

@@ -15,6 +15,7 @@ export default function Customers() {
   const { list, selectedId, searchTerm } = useSelector((state) => state.customers);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
   const [market, setMarket] = useState('All Markets');
+  const [loadError, setLoadError] = useState('');
 
   const filtered = list.filter((c) =>
     (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -25,9 +26,15 @@ export default function Customers() {
   const selected = list.find((c) => c.id === selectedId);
 
   useEffect(() => {
+    let active = true;
     getCustomers().then((customers) => {
-      if (customers.length) dispatch(replaceCustomers(customers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))));
-    }).catch(() => {});
+      if (!active) return;
+      setLoadError('');
+      dispatch(replaceCustomers(customers.map((customer) => ({ ...customer, location: customer.stall, joined: new Date(customer.createdAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }), initials: customer.name.split(' ').map((word) => word[0]).join('').slice(0, 2), totalLoans: 0, defaultRate: 0, creditScore: 0, paymentHistory: [] }))));
+    }).catch(() => {
+      if (active) setLoadError('Could not load customer records. Confirm that the backend is running, then refresh.');
+    });
+    return () => { active = false; };
   }, [dispatch]);
 
   useEffect(() => {
@@ -45,6 +52,7 @@ export default function Customers() {
 
   return (
     <AppShell title="Customer Directory" subtitle="Manage field traders and microfinance profiles.">
+      {loadError && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</p>}
       {/* Search + filter row */}
       <div className={`flex flex-col sm:flex-row gap-3 mb-5 ${mobileView === 'detail' ? 'hidden lg:flex' : 'flex'}`}>
         <div className="relative flex-1">
