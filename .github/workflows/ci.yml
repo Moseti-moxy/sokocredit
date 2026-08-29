@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, development ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, development ]
 
 jobs:
   tests:
@@ -28,6 +28,13 @@ jobs:
 
       - name: Run tests
         working-directory: sokocredit-backend/flask_app
+        # Tests need a Fernet key for the customer-PII encryption columns
+        # (see app/security.py) - this is a throwaway key for CI only, never
+        # used against a real database. Real environments set their own via
+        # a repo/environment secret, not this value.
+        env:
+          FIELD_ENCRYPTION_KEY: 3ooa3nGBzIuQ75Y9juE9Zk_SwpbicJ0Tf1QUxJtKeFM=
+          JWT_SECRET_KEY: ci-test-only-not-a-real-secret-do-not-use-in-prod
         run: |
           export PYTHONPATH=$PWD
           pytest -q
