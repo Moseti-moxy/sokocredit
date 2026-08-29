@@ -126,6 +126,11 @@ class Customer(db.Model):
     seasonal_pattern = db.Column(db.JSON, default=dict)
     registered_by = db.Column(db.String(100))
     group_id = db.Column(db.String(36), db.ForeignKey('lending_groups.id'), index=True)
+    # Customer self-service portal login. Nullable: a customer created by staff
+    # (the normal onboarding path) has no login until they self-register or an
+    # agent issues them one - login is refused with a clear message rather than
+    # silently accepting an empty/None PIN (see customer_auth_routes.login()).
+    pin_hash = db.Column(db.String(255))
     documents = db.relationship('Document', back_populates='customer', cascade='all, delete-orphan', order_by='Document.uploaded_at')
     group = db.relationship('LendingGroup', back_populates='members')
 

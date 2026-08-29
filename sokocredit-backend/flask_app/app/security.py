@@ -66,6 +66,37 @@ def current_user_role():
         return None
 
 
+def customer_required(fn):
+    """Restrict a route to a customer's own access token (self-service portal),
+    never a staff token. Staff tokens carry a 'role' claim and no 'type' claim;
+    customer tokens carry 'type': 'customer' and no 'role' claim (see
+    customer_auth_routes.issue_customer_token) - checking 'type' explicitly here
+    (rather than just the absence of 'role') keeps the two token shapes from ever
+    being accepted by each other's routes, even if one of them changes claims later.
+    get_jwt_identity() inside the wrapped view is the customer's id.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        verify_jwt_in_request()
+        if get_jwt().get('type') != 'customer':
+            return jsonify(error='Insufficient permissions.'), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def current_customer_id():
+    """Like current_user_id(), but only returns an id for a customer-portal
+    token; returns None for a staff token or no token at all."""
+    try:
+        verify_jwt_in_request(optional=True)
+        claims = get_jwt()
+        if not claims or claims.get('type') != 'customer':
+            return None
+        return get_jwt_identity()
+    except Exception:
+        return None
+
+
 def _blind_index_pepper():
     pepper = os.environ.get('FIELD_ENCRYPTION_KEY')
     if not pepper:

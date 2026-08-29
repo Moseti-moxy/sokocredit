@@ -92,6 +92,8 @@ def create_app(test_config=None):
 
     from .analytics_routes import analytics
     from .auth_routes import auth_bp
+    from .customer_auth_routes import customer_auth
+    from .customer_portal_routes import customer_portal
     from .groups_routes import groups
     from .reminders_routes import reminders
     from .risk_routes import risk
@@ -107,5 +109,7 @@ def create_app(test_config=None):
     app.register_blueprint(risk)
     app.register_blueprint(reminders)
     app.register_blueprint(groups)
+    app.register_blueprint(customer_auth)
+    app.register_blueprint(customer_portal)
 
     return app
