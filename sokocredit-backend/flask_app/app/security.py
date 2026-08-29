@@ -1,10 +1,12 @@
+import hashlib
+import hmac
 import os
 from functools import wraps
 
 import bcrypt
 from cryptography.fernet import Fernet, InvalidToken
 from flask import jsonify
-from flask_jwt_extended import get_jwt, verify_jwt_in_request
+from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 from sqlalchemy.types import String, TypeDecorator
 
 ROLES = ('admin', 'lender', 'agent')
@@ -40,6 +42,51 @@ def role_required(*roles):
             return fn(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def current_user_id():
+    """Returns the JWT subject if a valid access/refresh token is present, else None.
+
+    Safe to call from anywhere (audit logging, optional-auth endpoints) - never raises,
+    since callers may need it outside of a route already guarded by jwt_required().
+    """
+    try:
+        verify_jwt_in_request(optional=True)
+        return get_jwt_identity()
+    except Exception:
+        return None
+
+
+def current_user_role():
+    try:
+        verify_jwt_in_request(optional=True)
+        claims = get_jwt()
+        return claims.get('role') if claims else None
+    except Exception:
+        return None
+
+
+def _blind_index_pepper():
+    pepper = os.environ.get('FIELD_ENCRYPTION_KEY')
+    if not pepper:
+        raise RuntimeError('FIELD_ENCRYPTION_KEY is not set; required for blind-index lookups too.')
+    return pepper.encode('utf-8')
+
+
+def blind_index(value):
+    """Deterministic HMAC-SHA256 of a normalized value, used as a lookup/uniqueness
+    index for a field whose plaintext is stored only in an EncryptedString column.
+
+    Fernet encryption is randomized (fresh nonce per call), so encrypted values can
+    never be compared or looked up directly in SQL. Pairing every EncryptedString PII
+    column with a `<field>_hash` column populated via this function keeps lookups and
+    unique constraints working (e.g. WHERE phone_number_hash = blind_index(phone))
+    without ever storing the plaintext outside the encrypted column.
+    """
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return hmac.new(_blind_index_pepper(), normalized.encode('utf-8'), hashlib.sha256).hexdigest()
 
 
 def _fernet():
