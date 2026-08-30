@@ -32,6 +32,15 @@ def serialize_user(user):
 @users_bp.get('/me')
 @jwt_required()
 def me():
+    """
+    Get the current logged-in user
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    responses:
+      200: {description: The current user}
+      404: {description: User not found}
+    """
     user = db.session.get(User, get_jwt_identity())
     if not user:
         return error('User not found.', 404)
@@ -41,6 +50,26 @@ def me():
 @users_bp.patch('/me/password')
 @jwt_required()
 def change_own_password():
+    """
+    Change your own password
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [currentPassword, newPassword]
+          properties:
+            currentPassword: {type: string}
+            newPassword: {type: string, example: NewSecret1}
+    responses:
+      200: {description: Password updated}
+      401: {description: Current password is incorrect}
+      400: {description: New password must be at least 8 characters}
+    """
     user = db.session.get(User, get_jwt_identity())
     values = body()
     new_password = values.get('newPassword', '')
@@ -56,6 +85,29 @@ def change_own_password():
 @users_bp.post('')
 @role_required('admin')
 def create_user():
+    """
+    Create a user (admin only)
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [email, password, fullName]
+          properties:
+            email: {type: string, example: agent@sokocredit.test}
+            password: {type: string, example: SuperSecret1}
+            fullName: {type: string, example: New Agent}
+            role: {type: string, enum: [admin, lender, agent], example: agent}
+    responses:
+      201: {description: User created}
+      400: {description: Validation error}
+      403: {description: Admin role required}
+      409: {description: An account with this email already exists}
+    """
     values = body()
     email = str(values.get('email', '')).strip().lower()
     password = values.get('password', '')
@@ -83,6 +135,21 @@ def create_user():
 @users_bp.get('')
 @role_required('admin')
 def list_users():
+    """
+    List users (admin only)
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    parameters:
+      - in: query
+        name: role
+        type: string
+        enum: [admin, lender, agent]
+        required: false
+    responses:
+      200: {description: Array of users}
+      403: {description: Admin role required}
+    """
     query = User.query.order_by(User.created_at.desc())
     if role := request.args.get('role'):
         query = query.filter_by(role=role)
@@ -92,6 +159,21 @@ def list_users():
 @users_bp.get('/<user_id>')
 @role_required('admin')
 def get_user(user_id):
+    """
+    Get a user by id (admin only)
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    parameters:
+      - in: path
+        name: user_id
+        type: string
+        required: true
+    responses:
+      200: {description: The user}
+      403: {description: Admin role required}
+      404: {description: User not found}
+    """
     user = db.session.get(User, user_id)
     return error('User not found.', 404) if not user else jsonify(user=serialize_user(user))
 
@@ -99,6 +181,33 @@ def get_user(user_id):
 @users_bp.patch('/<user_id>')
 @role_required('admin')
 def update_user(user_id):
+    """
+    Update a user (admin only)
+    Any subset of the fields below may be sent.
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    parameters:
+      - in: path
+        name: user_id
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            fullName: {type: string}
+            role: {type: string, enum: [admin, lender, agent]}
+            isActive: {type: boolean}
+            password: {type: string}
+    responses:
+      200: {description: Updated user}
+      400: {description: Validation error}
+      403: {description: Admin role required}
+      404: {description: User not found}
+    """
     user = db.session.get(User, user_id)
     if not user:
         return error('User not found.', 404)
@@ -125,6 +234,23 @@ def update_user(user_id):
 @users_bp.delete('/<user_id>')
 @role_required('admin')
 def deactivate_user(user_id):
+    """
+    Deactivate a user (admin only)
+    Soft-delete: sets isActive to false. Admins cannot deactivate themselves.
+    ---
+    tags: [Users]
+    security: [{Bearer: []}]
+    parameters:
+      - in: path
+        name: user_id
+        type: string
+        required: true
+    responses:
+      200: {description: Deactivated user}
+      403: {description: Admin role required}
+      404: {description: User not found}
+      409: {description: You cannot deactivate your own account}
+    """
     user = db.session.get(User, user_id)
     if not user:
         return error('User not found.', 404)

@@ -48,6 +48,27 @@ def issue_tokens(user):
 
 @auth_bp.post('/register')
 def register():
+    """
+    Register a new user
+    The first account ever created bootstraps as admin; every account after that self-registers as agent.
+    ---
+    tags: [Auth]
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [email, password, fullName]
+          properties:
+            email: {type: string, example: admin@sokocredit.test}
+            password: {type: string, example: SuperSecret1}
+            fullName: {type: string, example: Eugene Admin}
+    responses:
+      201: {description: User created, returns user object plus accessToken and refreshToken}
+      400: {description: Validation error}
+      409: {description: An account with this email already exists}
+    """
     values = body()
     email = str(values.get('email', '')).strip().lower()
     password = values.get('password', '')
@@ -78,6 +99,25 @@ def register():
 
 @auth_bp.post('/login')
 def login():
+    """
+    Log in with email and password
+    ---
+    tags: [Auth]
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [email, password]
+          properties:
+            email: {type: string, example: admin@sokocredit.test}
+            password: {type: string, example: SuperSecret1}
+    responses:
+      200: {description: Returns user object plus accessToken and refreshToken}
+      401: {description: Invalid email or password}
+      403: {description: Account has been deactivated}
+    """
     values = body()
     email = str(values.get('email', '')).strip().lower()
     password = values.get('password', '')
@@ -92,6 +132,15 @@ def login():
 @auth_bp.post('/refresh')
 @jwt_required(refresh=True)
 def refresh():
+    """
+    Exchange a refresh token for a new access token
+    ---
+    tags: [Auth]
+    security: [{Bearer: []}]
+    responses:
+      200: {description: Returns a new accessToken}
+      401: {description: Refresh token missing, invalid, or account no longer available}
+    """
     user = db.session.get(User, get_jwt_identity())
     if not user or not user.is_active:
         return error('Account no longer available.', 401)
@@ -101,6 +150,16 @@ def refresh():
 @auth_bp.post('/logout')
 @jwt_required(verify_type=False)
 def logout():
+    """
+    Log out and revoke the current token
+    Accepts either an access or a refresh token in the Authorization header.
+    ---
+    tags: [Auth]
+    security: [{Bearer: []}]
+    responses:
+      200: {description: Token revoked}
+      401: {description: Missing or invalid token}
+    """
     payload = get_jwt()
     db.session.add(TokenBlocklist(
         jti=payload['jti'],
