@@ -65,17 +65,24 @@ export const loginUser = createAsyncThunk(
       return { token, user, remember };
     }
     try {
-      const { data } = await apiClient.post('/auth/login', { identifier, password });
-      return { token: data.token, user: data.user, remember };
+      // Staff (User) accounts sign in with email; customer accounts sign in
+      // with email-or-national-ID (see app/customer_auth_routes.py) — same
+      // form field, different backend blueprint and response shape.
+      if (portal === 'staff') {
+        const { data } = await apiClient.post('/auth/login', { email: identifier, password });
+        return { token: data.accessToken, user: data.user, remember };
+      }
+      const { data } = await apiClient.post('/customer-auth/login', { identifier, password });
+      return { token: data.accessToken, user: { ...data.customer, role: 'customer' }, remember };
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || 'Unable to sign in. Please try again.');
+      return rejectWithValue(err.response?.data?.error || 'Unable to sign in. Please try again.');
     }
   }
 );
 
 export const signupUser = createAsyncThunk(
   'auth/signup',
-  async ({ fullName, email, password, customerId, pin, profile }, { rejectWithValue }) => {
+  async ({ fullName, email, customerId, pin, profile }, { rejectWithValue }) => {
     if (USE_MOCK_AUTH) {
       try {
         const user = customerId ? addCustomer({ name: fullName, customerId, email, pin, ...profile }) : null;
@@ -86,10 +93,18 @@ export const signupUser = createAsyncThunk(
       } catch (err) { return rejectWithValue(err.message); }
     }
     try {
-      const { data } = await apiClient.post('/auth/signup', { fullName, email, password });
-      return { token: data.token, user: data.user };
+      // Signup.jsx only registers customers (traders) — staff accounts are
+      // created via the admin-only /api/users endpoints instead.
+      const { data } = await apiClient.post('/customer-auth/register', {
+        fullName,
+        email,
+        nationalId: customerId,
+        phoneNumber: profile?.phone,
+        password: pin,
+      });
+      return { token: data.accessToken, user: { ...data.customer, role: 'customer' } };
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || 'Unable to create account. Please try again.');
+      return rejectWithValue(err.response?.data?.error || 'Unable to create account. Please try again.');
     }
   }
 );

@@ -60,6 +60,21 @@ def outstanding_balance(loan):
     return sum((item.amount_due - item.amount_paid for item in loan.repayment_schedule), Decimal('0'))
 
 
+def serialize_inventory_item(item):
+    loan = item.loan
+    next_unpaid = next((i for i in loan.repayment_schedule if i.amount_paid < i.amount_due), None)
+    today = date.today()
+    return {
+        'id': item.id, 'loanId': loan.id, 'itemName': item.item_name, 'quantity': float(item.quantity),
+        'unitCost': float(item.unit_cost), 'totalCost': float(item.quantity * item.unit_cost),
+        'soldUnits': float(item.sold_units), 'supplier': item.supplier,
+        'purchasedAt': item.purchased_at.isoformat() if item.purchased_at else None,
+        'financedAmount': float(loan.amount),
+        'repaymentStatus': 'At Risk' if next_unpaid and next_unpaid.due_date < today else 'On Track',
+        'daysLeft': (next_unpaid.due_date - today).days if next_unpaid else None,
+    }
+
+
 def serialize_repayment(repayment):
     return {
         'id': repayment.id,
@@ -1081,11 +1096,7 @@ def add_inventory_item(loan_id):
     db.session.add(item)
     log_action('ADD_INVENTORY_ITEM', 'Loan', loan.id, {'itemName': item_name})
     db.session.commit()
-    return jsonify(item={
-        'id': item.id, 'itemName': item.item_name, 'quantity': float(item.quantity),
-        'unitCost': float(item.unit_cost), 'totalCost': float(item.quantity * item.unit_cost),
-        'supplier': item.supplier, 'purchasedAt': item.purchased_at.isoformat() if item.purchased_at else None,
-    }), 201
+    return jsonify(item=serialize_inventory_item(item)), 201
 
 
 @api.get('/loans/<loan_id>/inventory-items')
@@ -1108,11 +1119,66 @@ def list_inventory_items(loan_id):
     loan = loan_or_404(loan_id)
     if not loan:
         return error('Loan not found.', 404)
-    return jsonify(items=[{
-        'id': i.id, 'itemName': i.item_name, 'quantity': float(i.quantity), 'unitCost': float(i.unit_cost),
-        'totalCost': float(i.quantity * i.unit_cost), 'supplier': i.supplier,
-        'purchasedAt': i.purchased_at.isoformat() if i.purchased_at else None,
-    } for i in loan.inventory_items])
+    return jsonify(items=[serialize_inventory_item(i) for i in loan.inventory_items])
+
+
+@api.patch('/loans/<loan_id>/inventory-items/<item_id>')
+@role_required('admin', 'lender', 'agent')
+def update_inventory_item(loan_id, item_id):
+    """
+    Update a stock/inventory item (e.g. record units sold)
+    ---
+    tags: [Loans]
+    security: [{Bearer: []}]
+    parameters:
+      - in: path
+        name: loan_id
+        type: string
+        required: true
+      - in: path
+        name: item_id
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            soldUnits: {type: number, example: 3}
+            quantity: {type: number}
+            unitCost: {type: number}
+            supplier: {type: string}
+    responses:
+      200: {description: Updated inventory item}
+      400: {description: Validation error}
+      404: {description: Loan or item not found}
+    """
+    loan = loan_or_404(loan_id)
+    if not loan:
+        return error('Loan not found.', 404)
+    item = next((i for i in loan.inventory_items if i.id == item_id), None)
+    if not item:
+        return error('Inventory item not found.', 404)
+    values = body()
+    try:
+        if 'soldUnits' in values:
+            item.sold_units = decimal(values['soldUnits'])
+        if 'quantity' in values:
+            item.quantity = decimal(values['quantity'])
+        if 'unitCost' in values:
+            item.unit_cost = decimal(values['unitCost'])
+    except (InvalidOperation, TypeError, ValueError):
+        return error('soldUnits, quantity, and unitCost must be valid numbers.')
+    if item.sold_units < 0 or item.quantity <= 0 or item.unit_cost <= 0:
+        return error('soldUnits must not be negative; quantity and unitCost must be positive.')
+    if item.sold_units > item.quantity:
+        return error('soldUnits cannot exceed quantity.')
+    if 'supplier' in values:
+        item.supplier = values.get('supplier')
+    log_action('UPDATE_INVENTORY_ITEM', 'Loan', loan.id, {'itemId': item.id})
+    db.session.commit()
+    return jsonify(item=serialize_inventory_item(item))
 
 
 @api.post('/mpesa/stk-callback')

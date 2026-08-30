@@ -1,72 +1,28 @@
-// Loan Renewal Suggestions API
-// Automated suggestions for loan renewals based on payment history
+import { apiClient } from '../../api/client';
 
-export const getLoanRenewalSuggestions = async (customerId) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/loan-renewal/suggestions/${customerId}`
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Renewal suggestions fetch failed:', error);
-    return { status: 'error', suggestions: [] };
-  }
-};
+function isApiUnavailable(error) {
+  return error?.response?.status === 502 || error?.code === 'ERR_NETWORK';
+}
 
-export const getPaymentHistory = async (customerId) => {
+// Every suggestion GET /api/risk/renewal-suggestions returns is implicitly
+// eligible (the backend only returns customers who qualify) - see
+// app/risk.py:suggest_renewals().
+export async function getRenewalSuggestions() {
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/loan-renewal/payment-history/${customerId}`
-    );
-    return response.json();
+    const { data } = await apiClient.get('/risk/renewal-suggestions');
+    return data.suggestions || [];
   } catch (error) {
-    console.error('Payment history fetch failed:', error);
-    return { status: 'error', payments: [] };
+    if (isApiUnavailable(error)) return [];
+    throw error;
   }
-};
+}
 
-export const calculateRenewalEligibility = async (loanId) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/loan-renewal/eligibility/${loanId}`
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Eligibility calculation failed:', error);
-    return { status: 'error', eligible: false };
-  }
-};
+export async function getLoanDetail(loanId) {
+  const { data } = await apiClient.get(`/loans/${loanId}`);
+  return data.loan;
+}
 
-export const requestLoanRenewal = async (loanId, newAmount, newTerm) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/loan-renewal/request`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          loanId,
-          newAmount,
-          newTerm,
-          requestDate: new Date().toISOString(),
-        }),
-      }
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Renewal request failed:', error);
-    return { status: 'error' };
-  }
-};
-
-export const getRenewalHistory = async (customerId) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/loan-renewal/history/${customerId}`
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Renewal history fetch failed:', error);
-    return { status: 'error', renewals: [] };
-  }
-};
+export async function requestLoanRenewal(loanId, terms = {}) {
+  const { data } = await apiClient.post(`/loans/${loanId}/renew`, terms);
+  return data.loan;
+}

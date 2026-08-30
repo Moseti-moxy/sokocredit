@@ -1,37 +1,75 @@
 import { useState } from 'react';
-import { Building2, Search, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Building2, AlertCircle, Loader2, X } from 'lucide-react';
 import AppShell from '../components/AppShell';
-
-const emptyBusiness = { name: '', regNumber: '', owner: '', type: 'Sole Proprietor', registered: '' };
+import CustomerPicker from '../components/CustomerPicker';
+import { checkBusinessRegistry } from '../features/customers/api/businessRegistryApi';
 
 export default function BusinessRegistry() {
-  const [businesses, setBusinesses] = useState([
-    { id: 1, name: 'Wanjiru Market Traders', regNumber: 'BRN-2024-001', owner: 'Jane Wanjiru', type: 'Sole Proprietor', status: 'Verified', registered: '2023-05-15', synced: true },
-    { id: 2, name: 'Otieno & Partners Ltd', regNumber: 'BRN-2024-002', owner: 'David Otieno', type: 'Partnership', status: 'Verified', registered: '2022-08-22', synced: true },
-    { id: 3, name: 'Kipchoge Enterprises', regNumber: 'BRN-2024-003', owner: 'Mary Kipchoge', type: 'Sole Proprietor', status: 'Pending', registered: '2025-02-10', synced: false },
-  ]);
-  const [query, setQuery] = useState(''); const [notice, setNotice] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false); const [form, setForm] = useState(emptyBusiness); const [selected, setSelected] = useState(null);
-  const matchingBusinesses = businesses.filter((business) => `${business.name} ${business.regNumber} ${business.owner}`.toLowerCase().includes(query.toLowerCase()));
-  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
-  const registerBusiness = (event) => {
-    event.preventDefault();
-    const id = Math.max(...businesses.map((business) => business.id)) + 1;
-    setBusinesses((items) => [{ ...form, id, status: 'Pending', synced: false }, ...items]); setNotice(`${form.name} was registered and is awaiting verification.`); setForm(emptyBusiness); setIsRegistering(false);
-  };
-  const linkToLoan = (business) => { setBusinesses((items) => items.map((item) => item.id === business.id ? { ...item, linked: true } : item)); setSelected((current) => current ? { ...current, linked: true } : current); setNotice(`${business.name} is now linked to its loan record.`); };
+  const [customer, setCustomer] = useState(null);
+  const [lookup, setLookup] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  return <AppShell title="Business Registry" subtitle="Verify and link business registrations with Kenya's business registry systems.">
-    <div className="grid gap-4 mb-6 lg:grid-cols-4"><Metric label="Total Registered" value={businesses.length} /><Metric label="Verified" value={businesses.filter((business) => business.status === 'Verified').length} tone="text-green-600" /><Metric label="Pending Verification" value={businesses.filter((business) => business.status === 'Pending').length} tone="text-orange-600" /><div className="rounded-2xl border border-brand-100 bg-white p-5"><button type="button" onClick={() => setIsRegistering(true)} className="flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700"><Building2 size={16} /> Register Business</button></div></div>
-    <div className="mb-6 rounded-2xl border border-brand-100 bg-white p-5"><div className="flex gap-3"><div className="relative flex-1"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by business name, owner, or registration number..." className="w-full rounded-lg border border-brand-100 bg-white py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" /></div><button type="button" onClick={() => setNotice(query ? `${matchingBusinesses.length} matching business${matchingBusinesses.length === 1 ? '' : 'es'} found.` : 'Enter a business name, owner, or registration number to search.')} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Verify</button></div></div>
-    {notice && <p role="status" className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">{notice}</p>}
-    <div className="space-y-4">{matchingBusinesses.map((business) => <article key={business.id} className={`rounded-2xl border p-5 ${business.status === 'Verified' ? 'border-brand-100 bg-white' : 'border-orange-100 bg-orange-50/30'}`}><div className="mb-4 flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><Building2 size={20} className="text-brand-600" /><h3 className="font-semibold text-slate-900">{business.name}</h3><Status status={business.status} />{business.linked && <span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700">Loan linked</span>}</div></div></div><div className="mb-4 grid grid-cols-2 gap-4 border-b border-brand-100 pb-4 sm:grid-cols-4"><Detail label="Registration Number" value={business.regNumber} /><Detail label="Owner" value={business.owner} /><Detail label="Business Type" value={business.type} /><Detail label="Registered" value={business.registered} /></div><div className="flex gap-2"><button type="button" onClick={() => setSelected(business)} className="flex-1 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">View Details</button><button type="button" onClick={() => linkToLoan(business)} className="rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50">{business.linked ? 'Linked to Loan' : 'Link to Loan'}</button></div></article>)}{!matchingBusinesses.length && <p className="rounded-2xl border border-brand-100 bg-white p-6 text-center text-sm text-slate-500">No businesses match your search.</p>}</div>
-    {isRegistering && <Modal title="Register a business" onClose={() => setIsRegistering(false)}><form onSubmit={registerBusiness} className="grid gap-4"><Field label="Business name"><input required value={form.name} onChange={(event) => update('name', event.target.value)} className="app-field h-11 px-3" /></Field><Field label="Registration number"><input required value={form.regNumber} onChange={(event) => update('regNumber', event.target.value)} placeholder="e.g. BRN-2026-004" className="app-field h-11 px-3" /></Field><Field label="Owner name"><input required value={form.owner} onChange={(event) => update('owner', event.target.value)} className="app-field h-11 px-3" /></Field><Field label="Business type"><select value={form.type} onChange={(event) => update('type', event.target.value)} className="app-field h-11 px-3"><option>Sole Proprietor</option><option>Partnership</option><option>Limited Company</option></select></Field><Field label="Registration date"><input required type="date" value={form.registered} onChange={(event) => update('registered', event.target.value)} className="app-field h-11 px-3" /></Field><button type="submit" className="rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600">Submit registration</button></form></Modal>}
-    {selected && <Modal title="Business registration details" onClose={() => setSelected(null)}><div className="space-y-4 text-sm"><div className="rounded-xl bg-brand-50 p-4"><p className="font-semibold text-slate-900">{selected.name}</p><p className="mt-1 text-slate-600">{selected.regNumber} · {selected.type}</p></div><div className="grid grid-cols-2 gap-4"><Detail label="Owner" value={selected.owner} /><Detail label="Registered" value={selected.registered} /><Detail label="Verification" value={selected.status} /><Detail label="Loan link" value={selected.linked ? 'Linked' : 'Not linked'} /></div><button type="button" onClick={() => linkToLoan(selected)} className="w-full rounded-xl border border-brand-200 px-4 py-3 text-sm font-semibold text-brand-700 hover:bg-brand-50">{selected.linked ? 'Linked to loan' : 'Link to loan'}</button></div></Modal>}
-  </AppShell>;
+  async function runCheck(selected) {
+    setCustomer(selected);
+    setLookup(null);
+    setError('');
+    if (!selected) return;
+    setIsLoading(true);
+    try {
+      const result = await checkBusinessRegistry(selected.id);
+      setLookup(result);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to check the business registry.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <AppShell title="Business Registry" subtitle="Look up a customer's business registration record with Kenya's business registry (eCitizen/BRS).">
+      <div className="mb-6 rounded-2xl border border-brand-100 bg-white p-5">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Select a customer</p>
+        <CustomerPicker selected={customer} onSelect={runCheck} />
+      </div>
+
+      {isLoading && (
+        <p className="flex items-center gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
+          <Loader2 size={14} className="animate-spin" /> Checking business registry…
+        </p>
+      )}
+      {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {lookup && <Result customer={customer} lookup={lookup} onClose={() => setLookup(null)} />}
+    </AppShell>
+  );
 }
-function Metric({ label, value, tone = 'text-slate-900' }) { return <div className="rounded-2xl border border-brand-100 bg-white p-5"><p className="mb-1 text-xs text-slate-500">{label}</p><p className={`font-display text-2xl font-semibold ${tone}`}>{value}</p></div>; }
-function Detail({ label, value }) { return <div><p className="mb-1 text-xs text-slate-500">{label}</p><p className="font-semibold text-slate-900">{value}</p></div>; }
-function Status({ status }) { const clear = status === 'Verified'; return <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${clear ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{clear ? <CheckCircle size={12} /> : <AlertCircle size={12} />}{status}</span>; }
-function Field({ label, children }) { return <label className="grid gap-1.5 text-sm font-medium text-slate-700">{label}{children}</label>; }
-function Modal({ title, onClose, children }) { return <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true"><section className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"><div className="mb-5 flex items-start justify-between gap-4"><h2 className="font-display text-xl font-semibold text-slate-900">{title}</h2><button type="button" onClick={onClose} aria-label="Close dialog" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div>{children}</section></div>; }
+
+function Result({ customer, lookup, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true">
+      <section className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Building2 size={20} className="text-brand-600" />
+            <h2 className="font-display text-xl font-semibold text-slate-900">{customer.name}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
+        </div>
+
+        {lookup.available ? (
+          lookup.result ? (
+            <pre className="overflow-x-auto rounded-xl bg-brand-50 p-4 text-xs text-slate-700">{JSON.stringify(lookup.result, null, 2)}</pre>
+          ) : (
+            <p className="flex items-center gap-2 rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-700">
+              <AlertCircle size={14} /> No business registry record was found for this registration number.
+            </p>
+          )
+        ) : (
+          <p className="flex items-start gap-2 rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-700">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" /> {lookup.reason}
+          </p>
+        )}
+      </section>
+    </div>
+  );
+}

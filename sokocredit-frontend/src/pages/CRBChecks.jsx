@@ -1,30 +1,95 @@
 import { useState } from 'react';
-import { CheckCircle, Search, AlertCircle, X } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 import AppShell from '../components/AppShell';
+import CustomerPicker from '../components/CustomerPicker';
+import { getCreditReport } from '../features/customers/api/crbApi';
 
 export default function CRBChecks() {
-  const [checks, setChecks] = useState([
-    { id: 1, name: 'Jane Wanjiru', idNumber: '12345678', score: 480, status: 'Clear', date: '2025-08-20', synced: true, accounts: 2, outstanding: 12000, latePayments: 0, summary: 'Good repayment record with no adverse listings.' },
-    { id: 2, name: 'David Otieno', idNumber: '87654321', score: 320, status: 'Caution', date: '2025-08-19', synced: true, accounts: 4, outstanding: 68500, latePayments: 2, summary: 'Two late repayments were reported in the last 12 months.' },
-    { id: 3, name: 'Mary Kipchoge', idNumber: '45678912', score: 590, status: 'Clear', date: '2025-08-18', synced: true, accounts: 1, outstanding: 0, latePayments: 0, summary: 'Excellent credit standing and no outstanding adverse items.' },
-  ]);
-  const [query, setQuery] = useState(''); const [notice, setNotice] = useState(''); const [selected, setSelected] = useState(null);
-  const matchingChecks = checks.filter((check) => `${check.name} ${check.idNumber}`.toLowerCase().includes(query.toLowerCase()));
-  const createCheck = () => {
-    if (!query.trim()) { setNotice('Enter a customer name or national ID before starting a new CRB check.'); return; }
-    const id = Math.max(...checks.map((check) => check.id)) + 1;
-    const check = { id, name: query, idNumber: 'Pending verification', score: '—', status: 'Pending', date: new Date().toISOString().slice(0, 10), synced: false, accounts: '—', outstanding: '—', latePayments: '—', summary: 'The CRB check has been submitted and is awaiting a bureau response.' };
-    setChecks((items) => [check, ...items]); setSelected(check); setNotice(`A CRB check for ${query} was added to the review queue.`);
-  };
-  return <AppShell title="CRB Credit Checks" subtitle="Credit verification reports for administrators.">
-    <div className="mb-6 grid gap-4 lg:grid-cols-3"><Metric label="Total Checks" value={checks.length} /><Metric label="Clear Status" value={checks.filter((check) => check.status === 'Clear').length} tone="text-green-600" /><Metric label="Caution Status" value={checks.filter((check) => check.status === 'Caution').length} tone="text-orange-600" /></div>
-    <div className="mb-6 rounded-2xl border border-brand-100 bg-white p-5"><div className="flex gap-3"><div className="relative flex-1"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer name or ID number..." className="w-full rounded-lg border border-brand-100 bg-white py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" /></div><button type="button" onClick={createCheck} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">New Check</button></div></div>
-    {notice && <p role="status" className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">{notice}</p>}
-    <div className="space-y-3">{matchingChecks.map((check) => <article key={check.id} className="rounded-2xl border border-brand-100 bg-white p-5 transition hover:shadow-md"><div className="flex items-start justify-between gap-4"><div className="flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><h3 className="font-semibold text-slate-900">{check.name}</h3><Badge status={check.status} /></div><p className="mb-3 text-sm text-slate-500">ID: {check.idNumber}</p><div className="grid grid-cols-2 gap-4 sm:grid-cols-4"><Detail label="Credit Score" value={check.score} /><Detail label="Last Checked" value={check.date} /><Detail label="Open Accounts" value={check.accounts} /><Detail label="Late Payments" value={check.latePayments} /></div></div><button type="button" onClick={() => setSelected(check)} className="shrink-0 text-sm font-medium text-brand-600 hover:text-brand-700">View Report</button></div></article>)}{!matchingChecks.length && <p className="rounded-2xl border border-brand-100 bg-white p-6 text-center text-sm text-slate-500">No CRB checks match your search.</p>}</div>
-    {selected && <Report check={selected} onClose={() => setSelected(null)} />}
-  </AppShell>;
+  const [customer, setCustomer] = useState(null);
+  const [report, setReport] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function runCheck(selected) {
+    setCustomer(selected);
+    setReport(null);
+    setError('');
+    if (!selected) return;
+    setIsLoading(true);
+    try {
+      const result = await getCreditReport(selected.id);
+      if (result.unavailable) {
+        setError('Backend unreachable. Try again once the API is reachable.');
+      } else {
+        setReport(result);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to run the credit check.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <AppShell title="CRB Credit Checks" subtitle="Internal repayment history plus a bureau credit check for a selected customer.">
+      <div className="mb-6 rounded-2xl border border-brand-100 bg-white p-5">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Select a customer</p>
+        <CustomerPicker selected={customer} onSelect={runCheck} />
+      </div>
+
+      {isLoading && (
+        <p className="flex items-center gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
+          <Loader2 size={14} className="animate-spin" /> Running credit check…
+        </p>
+      )}
+      {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {report && <Report customer={customer} report={report} onClose={() => setReport(null)} />}
+    </AppShell>
+  );
 }
-function Metric({ label, value, tone = 'text-slate-900' }) { return <div className="rounded-2xl border border-brand-100 bg-white p-5"><p className="mb-1 text-xs text-slate-500">{label}</p><p className={`font-display text-2xl font-semibold ${tone}`}>{value}</p></div>; }
-function Detail({ label, value }) { return <div><p className="text-xs text-slate-500">{label}</p><p className="font-semibold text-slate-900">{value}</p></div>; }
-function Badge({ status }) { const clear = status === 'Clear'; return <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${clear ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{clear ? <CheckCircle size={12} /> : <AlertCircle size={12} />}{status}</span>; }
-function Report({ check, onClose }) { return <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="crb-report-title"><section className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl"><div className="mb-5 flex items-start justify-between gap-4"><div><h2 id="crb-report-title" className="font-display text-xl font-semibold text-slate-900">CRB Credit Report</h2><p className="mt-1 text-sm text-slate-500">{check.name} · {check.idNumber}</p></div><button type="button" onClick={onClose} aria-label="Close credit report" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><Detail label="Credit score" value={check.score} /><Detail label="Status" value={check.status} /><Detail label="Open accounts" value={check.accounts} /><Detail label="Outstanding" value={typeof check.outstanding === 'number' ? `KES ${check.outstanding.toLocaleString()}` : check.outstanding} /></div><div className="mt-5 rounded-xl bg-brand-50 p-4"><p className="text-xs font-medium uppercase text-brand-700">Report summary</p><p className="mt-1 text-sm text-slate-700">{check.summary}</p></div><div className="mt-5 border-t border-brand-100 pt-4 text-sm"><p className="font-semibold text-slate-900">Bureau check details</p><p className="mt-2 text-slate-600">Checked: {check.date}</p><p className="mt-1 text-slate-600">Data status: {check.synced ? 'Synced with CRB' : 'Awaiting CRB response'}</p><p className="mt-1 text-slate-600">Late payments recorded: {check.latePayments}</p></div></section></div>; }
+
+function Detail({ label, value }) {
+  return <div><p className="text-xs text-slate-500">{label}</p><p className="font-semibold text-slate-900">{value}</p></div>;
+}
+
+function Report({ customer, report, onClose }) {
+  const { external, accounts, outstanding, latePayments, summary } = report;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="crb-report-title">
+      <section className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 id="crb-report-title" className="font-display text-xl font-semibold text-slate-900">Credit Report</h2>
+            <p className="mt-1 text-sm text-slate-500">{customer.name} · {customer.nationalId}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close credit report" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Detail label="Loans considered" value={accounts} />
+          <Detail label="Outstanding" value={`KES ${outstanding.toLocaleString('en-KE')}`} />
+          <Detail label="Late payments" value={latePayments} />
+          <Detail label="Internal rating" value={report.internal.rating} />
+        </div>
+
+        <div className="mt-5 rounded-xl bg-brand-50 p-4">
+          <p className="text-xs font-medium uppercase text-brand-700">Internal summary</p>
+          <p className="mt-1 text-sm text-slate-700">{summary}</p>
+        </div>
+
+        <div className="mt-5 border-t border-brand-100 pt-4 text-sm">
+          <p className="font-semibold text-slate-900">Bureau check (external)</p>
+          {external.available ? (
+            <div className="mt-2 flex items-center gap-2 text-green-700">
+              <CheckCircle size={14} /> Score {external.score} · {external.rating}
+            </div>
+          ) : (
+            <div className="mt-2 flex items-start gap-2 text-orange-700">
+              <AlertCircle size={14} className="mt-0.5 shrink-0" /> {external.reason}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}

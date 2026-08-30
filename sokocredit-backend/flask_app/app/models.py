@@ -271,6 +271,23 @@ class PaymentReminder(db.Model):
     loan = db.relationship('Loan', back_populates='reminders')
 
 
+class WhatsAppMessage(db.Model):
+    """An ad-hoc WhatsApp message sent to a customer from the Communication Center
+    (as opposed to PaymentReminder, which is scoped to an automated installment
+    reminder for a specific loan/schedule item)."""
+    __tablename__ = 'whatsapp_messages'
+
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    customer_id = db.Column(db.String(36), db.ForeignKey('customers.id'), nullable=False, index=True)
+    phone_number = db.Column(db.String(16), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(16), nullable=False, default='SENT')  # SENT, FAILED
+    provider_response = db.Column(db.JSON)
+    sent_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    customer = db.relationship('Customer')
+
+
 class RiskAlert(db.Model):
     """Automated alerts raised by app.risk for overdue payments and high-risk accounts."""
     __tablename__ = 'risk_alerts'
@@ -333,6 +350,7 @@ class InventoryFinancingItem(db.Model):
     unit_cost = db.Column(db.Numeric(12, 2), nullable=False)
     supplier = db.Column(db.String(160))
     purchased_at = db.Column(db.Date)
+    sold_units = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
     loan = db.relationship('Loan', back_populates='inventory_items')

@@ -1,4 +1,5 @@
 from datetime import date, timezone
+from decimal import Decimal
 
 from app.models import Loan, RepaymentScheduleItem
 
@@ -31,6 +32,7 @@ def compute_credit_score(customer_id):
             'overdueInstallments': 0,
             'completedLoans': 0,
             'defaultRatePct': 0,
+            'outstandingBalance': 0,
         }
 
     today = date.today()
@@ -54,6 +56,8 @@ def compute_credit_score(customer_id):
     else:
         rating = 'POOR'
 
+    outstanding_balance = sum((i.amount_due - i.amount_paid for i in items), Decimal('0'))
+
     return {
         'score': score,
         'rating': rating,
@@ -62,4 +66,5 @@ def compute_credit_score(customer_id):
         'overdueInstallments': len(overdue_items),
         'completedLoans': completed_loans,
         'defaultRatePct': round((len(overdue_items) / len(items)) * 100, 1) if items else 0,
+        'outstandingBalance': float(outstanding_balance),
     }

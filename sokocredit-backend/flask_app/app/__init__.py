@@ -99,6 +99,7 @@ def create_app(test_config=None):
     from .risk_routes import risk
     from .routes import api
     from .user_routes import users_bp
+    from .whatsapp_routes import whatsapp
     app.register_blueprint(api)
     from customers import customers_bp
     from customers import models as customer_models
@@ -111,5 +112,6 @@ def create_app(test_config=None):
     app.register_blueprint(groups)
     app.register_blueprint(customer_auth)
     app.register_blueprint(customer_portal)
+    app.register_blueprint(whatsapp)
 
     return app

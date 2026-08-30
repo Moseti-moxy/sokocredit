@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, Send, ShieldQuestion, UserRoundCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, MessageCircle, Send, ShieldQuestion, UserRoundCheck } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import ConversationThread from './ConversationThread';
 import { CASE_STATUSES } from '../constants';
 import { timeAgo, formatDateTime } from '../../../utils/timeAgo';
+import { sendWhatsAppMessage } from '../whatsappApi';
 
 // Staff-side case workspace used by BOTH the Agent Support Inbox and the
 // Admin Communication Center. The surrounding layouts differ per role; this
@@ -34,6 +35,9 @@ export default function CaseDetailPanel({
 }) {
   const [replyText, setReplyText] = useState('');
   const [noteMode, setNoteMode] = useState(false);
+  const [sendAsWhatsApp, setSendAsWhatsApp] = useState(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsAppStatus, setWhatsAppStatus] = useState(null);
   const [showEscalate, setShowEscalate] = useState(false);
   const [escalationReason, setEscalationReason] = useState('');
   const [reassignTo, setReassignTo] = useState('');
@@ -42,15 +46,23 @@ export default function CaseDetailPanel({
 
   const isResolved = caseItem.status === 'Resolved';
 
-  function submitReply() {
+  async function submitReply() {
     const text = replyText.trim();
     if (!text) return;
     if (noteMode) {
       onAddNote(text);
-    } else {
-      onReply(text);
+      setReplyText('');
+      return;
     }
+    onReply(text);
     setReplyText('');
+    if (sendAsWhatsApp && caseItem.customerId) {
+      setWhatsAppStatus(null);
+      setIsSendingWhatsApp(true);
+      const result = await sendWhatsAppMessage(caseItem.customerId, text);
+      setIsSendingWhatsApp(false);
+      setWhatsAppStatus(result.sent ? { ok: true, text: 'Sent over WhatsApp.' } : { ok: false, text: result.reason });
+    }
   }
 
   function submitEscalation() {
@@ -236,27 +248,45 @@ export default function CaseDetailPanel({
               placeholder={noteMode ? 'Write an internal note (staff only, never shown to the customer)…' : 'Type your reply to the customer…'}
               className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={noteMode}
-                  onChange={(event) => setNoteMode(event.target.checked)}
-                  className="rounded border-slate-300 text-amber-600 focus:ring-amber-300"
-                />
-                Internal note instead of reply
-              </label>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={noteMode}
+                    onChange={(event) => setNoteMode(event.target.checked)}
+                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-300"
+                  />
+                  Internal note instead of reply
+                </label>
+                {!noteMode && caseItem.customerId && (
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={sendAsWhatsApp}
+                      onChange={(event) => setSendAsWhatsApp(event.target.checked)}
+                      className="rounded border-slate-300 text-green-600 focus:ring-green-300"
+                    />
+                    <MessageCircle size={13} className="text-green-600" /> Also send as WhatsApp message
+                  </label>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={submitReply}
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || isSendingWhatsApp}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
                   noteMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-brand-500 hover:bg-brand-600'
                 }`}
               >
-                <Send size={14} /> {noteMode ? 'Add Note' : 'Send Reply'}
+                <Send size={14} /> {noteMode ? 'Add Note' : isSendingWhatsApp ? 'Sending…' : 'Send Reply'}
               </button>
             </div>
+            {whatsAppStatus && (
+              <p className={`mt-2 text-xs ${whatsAppStatus.ok ? 'text-green-700' : 'text-red-600'}`} role={whatsAppStatus.ok ? 'status' : 'alert'}>
+                {whatsAppStatus.text}
+              </p>
+            )}
           </div>
         )}
       </div>

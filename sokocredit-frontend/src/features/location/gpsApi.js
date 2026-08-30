@@ -1,82 +1,38 @@
-// GPS Tracking API
-// Track customer locations and optimize delivery/collection routes
+import { apiClient } from '../../api/client';
 
-export const trackCustomerLocation = async (customerId, latitude, longitude) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/gps/track`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerId,
-          latitude,
-          longitude,
-          timestamp: new Date().toISOString(),
-        }),
-      }
-    );
-    return response.json();
-  } catch (error) {
-    console.error('GPS tracking failed:', error);
-    return { status: 'error' };
-  }
-};
+function isApiUnavailable(error) {
+  return error?.response?.status === 502 || error?.code === 'ERR_NETWORK';
+}
 
-export const getCustomerLocation = async (customerId) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/gps/location/${customerId}`
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Get location failed:', error);
-    return { status: 'error' };
-  }
-};
+// GET /api/customers already returns latitude/longitude, but
+// customersApi.js's normalizeCustomer() drops them (not needed by the
+// customer directory screens) - map them separately here.
+function normalizeLocation(customer) {
+  return {
+    id: customer.id,
+    name: customer.fullName,
+    market: customer.market || '—',
+    lat: customer.latitude,
+    lng: customer.longitude,
+    status: customer.status === 'ACTIVE' ? 'Active' : 'Inactive',
+  };
+}
 
-export const optimizeDeliveryRoute = async (agentId, customerIds) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/gps/optimize-route`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, customerIds }),
-      }
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Route optimization failed:', error);
-    return { status: 'error' };
-  }
-};
+export async function fetchCustomerLocations() {
+  const { data } = await apiClient.get('/customers', { params: { status: 'ACTIVE' } });
+  return (data.customers || [])
+    .map(normalizeLocation)
+    .filter((location) => location.lat != null && location.lng != null);
+}
 
-export const getLocationHistory = async (customerId, days = 30) => {
+export async function optimizeRoute({ startLat, startLng, market }) {
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/gps/history/${customerId}?days=${days}`
-    );
-    return response.json();
+    const { data } = await apiClient.get('/customers/route-optimize', {
+      params: { startLat, startLng, ...(market ? { market } : {}) },
+    });
+    return { route: data.route, totalDistanceKm: data.totalDistanceKm };
   } catch (error) {
-    console.error('Location history fetch failed:', error);
-    return { status: 'error', locations: [] };
+    if (isApiUnavailable(error)) return { route: [], totalDistanceKm: 0, unavailable: true };
+    throw error;
   }
-};
-
-export const createGeofence = async (customerId, latitude, longitude, radius) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/api/gps/geofence`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId, latitude, longitude, radius }),
-      }
-    );
-    return response.json();
-  } catch (error) {
-    console.error('Geofence creation failed:', error);
-    return { status: 'error' };
-  }
-};
+}
