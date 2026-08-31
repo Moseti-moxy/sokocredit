@@ -50,8 +50,11 @@ def issue_tokens(user):
 @limiter.limit('10/minute')
 def register():
     """
-    Register a new user
-    The first account ever created bootstraps as admin; every account after that self-registers as agent.
+    Bootstrap the first admin account
+    Only works once, when no staff account exists yet. Every subsequent
+    account is created by an admin via POST /api/users - this endpoint
+    stays closed afterward so registration can't be used as an open
+    signup for staff/admin access.
     ---
     tags: [Auth]
     parameters:
@@ -66,10 +69,13 @@ def register():
             password: {type: string, example: SuperSecret1}
             fullName: {type: string, example: Eugene Admin}
     responses:
-      201: {description: User created, returns user object plus accessToken and refreshToken}
+      201: {description: Admin account created, returns user object plus accessToken and refreshToken}
       400: {description: Validation error}
-      409: {description: An account with this email already exists}
+      403: {description: An account already exists - use POST /api/users (admin only) instead}
     """
+    if User.query.first() is not None:
+        return error('Registration is closed. Ask an administrator to create your account.', 403)
+
     values = body()
     email = str(values.get('email', '')).strip().lower()
     password = values.get('password', '')
@@ -81,13 +87,9 @@ def register():
     if not full_name:
         return error('fullName is required.')
 
-    # The very first account bootstraps as admin so someone can manage the
-    # system; every account after that self-registers as the lowest-privilege
-    # role. Lender/admin accounts beyond the first are created via the
-    # admin-only /api/users endpoints.
-    role = 'admin' if User.query.first() is None else 'agent'
-
-    user = User(email=email, full_name=full_name, role=role)
+    # Only reachable when the users table is empty (checked above) - this is
+    # the one-time bootstrap that lets someone manage the system at all.
+    user = User(email=email, full_name=full_name, role='admin')
     user.set_password(password)
     db.session.add(user)
     try:

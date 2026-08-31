@@ -12,6 +12,14 @@ export const AUTH_STORAGE_KEY = 'sokocredit.auth';
 // hardcoded demo credentials in mockAuth.js reachable.
 const USE_MOCK_AUTH = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH === 'true';
 
+// Flask returns `fullName` (see serialize_user/serialize_customer_account),
+// but every component in this app (UserMenu, NavDrawer, ...) was built
+// against mock data shaped with `name` - normalize once here so the rest of
+// the app doesn't need to know which auth source a session came from.
+function normalizeUser(rawUser) {
+  return { ...rawUser, name: rawUser.name ?? rawUser.fullName };
+}
+
 // "Remember me" checked -> localStorage (survives closing the browser).
 // Unchecked -> sessionStorage (cleared when the tab/browser closes). We
 // check both on load since we don't know which one was used last.
@@ -71,10 +79,10 @@ export const loginUser = createAsyncThunk(
       // form field, different backend blueprint and response shape.
       if (portal === 'staff') {
         const { data } = await apiClient.post('/auth/login', { email: identifier, password });
-        return { token: data.accessToken, user: data.user, remember };
+        return { token: data.accessToken, user: normalizeUser(data.user), remember };
       }
       const { data } = await apiClient.post('/customer-auth/login', { identifier, password });
-      return { token: data.accessToken, user: { ...data.customer, role: 'customer' }, remember };
+      return { token: data.accessToken, user: normalizeUser({ ...data.customer, role: 'customer' }), remember };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error || 'Unable to sign in. Please try again.');
     }
@@ -103,7 +111,7 @@ export const signupUser = createAsyncThunk(
         phoneNumber: profile?.phone,
         password: pin,
       });
-      return { token: data.accessToken, user: { ...data.customer, role: 'customer' } };
+      return { token: data.accessToken, user: normalizeUser({ ...data.customer, role: 'customer' }) };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error || 'Unable to create account. Please try again.');
     }

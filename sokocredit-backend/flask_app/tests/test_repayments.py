@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import create_app
 from app.extensions import db
 from app.models import MpesaStkRequest
-from tests.helpers import auth_headers
+from tests.helpers import auth_headers, staff_headers
 
 
 def test_repayments_allocate_to_schedule_and_complete_loan():
@@ -71,8 +71,9 @@ def test_only_lender_or_admin_can_approve_a_loan():
         db.create_all()
     client = app.test_client()
     admin_headers = auth_headers(client, email='admin@sokocredit.test')
-    # Second registration self-registers as the lowest-privilege role (agent).
-    agent_headers = auth_headers(client, email='agent@sokocredit.test')
+    # Registration closes after the first (admin) account - additional staff
+    # are created by the admin via POST /api/users, same as in production.
+    agent_headers = staff_headers(client, admin_headers, email='agent@sokocredit.test')
 
     loan = client.post('/api/loans', json={
         'customerId': 'customer-x', 'amount': 100, 'interestRate': 0,
