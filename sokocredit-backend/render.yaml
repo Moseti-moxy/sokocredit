@@ -6,6 +6,29 @@ databases:
 
 services:
   - type: web
+    name: sokocredit-frontend
+    runtime: static
+    plan: free
+    rootDir: sokocredit-frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: ./dist
+    # React Router uses client-side routing - without this, refreshing on
+    # any path other than / (e.g. /customers) 404s instead of loading the app.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_USE_MOCK_AUTH
+        value: "false"
+      # Points the built frontend at the deployed backend's API. Render only
+      # assigns the backend its *.onrender.com URL once it's first deployed,
+      # so this can't be wired automatically - after the backend service
+      # exists, set this to https://<its-onrender-url>/api and redeploy.
+      - key: VITE_API_BASE_URL
+        sync: false
+
+  - type: web
     name: sokocredit-backend
     runtime: python
     plan: free
@@ -21,9 +44,11 @@ services:
           property: connectionString
       - key: JWT_SECRET_KEY
         generateValue: true
-      # Comma-separated list of your deployed frontend origin(s), e.g.
-      # https://sokocredit.example.com. Falls back to the local Vite dev
-      # server if unset - set this before going live so CORS isn't open.
+      # Comma-separated list of your deployed frontend origin(s). Same
+      # chicken-and-egg as VITE_API_BASE_URL above: once the sokocredit-frontend
+      # static site is deployed, set this to its https://*.onrender.com URL
+      # (no trailing slash, no path) and redeploy this service. Falls back to
+      # the local Vite dev server if unset - never leave this on '*' in prod.
       - key: CORS_ORIGINS
         sync: false
       # Encrypts customer PII (phone, national ID, etc.) at rest and drives
