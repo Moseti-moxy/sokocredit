@@ -17,7 +17,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, get_jw
 from sqlalchemy.exc import IntegrityError
 
 from .audit import log_action
-from .extensions import db
+from .extensions import db, limiter
 from .models import Customer
 from .mpesa import MpesaError, normalize_phone_number
 from .security import blind_index, customer_required, hash_password, verify_password
@@ -59,6 +59,7 @@ def find_customer_by_identifier(identifier):
 
 
 @customer_auth.post('/register')
+@limiter.limit('10/minute')
 def register():
     """
     Self-register a customer account (light-touch - full KYC comes later from staff)
@@ -126,6 +127,7 @@ def register():
 
 
 @customer_auth.post('/login')
+@limiter.limit('10/minute')
 def login():
     """
     Log in as a customer using email or national ID + PIN

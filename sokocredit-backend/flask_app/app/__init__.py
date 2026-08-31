@@ -4,7 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 
-from .extensions import cors, db, jwt, migrate, swagger
+from .extensions import cors, db, jwt, limiter, migrate, swagger
 
 
 def create_app(test_config=None):
@@ -16,6 +16,15 @@ def create_app(test_config=None):
         SQLALCHEMY_DATABASE_URI=default_db_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'development-only-change-me'),
+        # Comma-separated list of allowed frontend origins. Defaults to the
+        # local Vite dev server so local dev keeps working out of the box;
+        # set this explicitly to your deployed frontend origin(s) in
+        # production instead of leaving CORS open to '*'.
+        CORS_ORIGINS=[
+            origin.strip()
+            for origin in os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
+            if origin.strip()
+        ],
         # File uploads (customer ID/permit documents) - was previously referenced
         # by customers/storage.py but never actually set, so uploads 500'd.
         UPLOAD_FOLDER=os.getenv('UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads')),
@@ -57,6 +66,11 @@ def create_app(test_config=None):
         JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=30),
         JWT_BLOCKLIST_ENABLED=True,
         JWT_BLOCKLIST_TOKEN_CHECKS=['access', 'refresh'],
+        # Disabled under TESTING: the limiter's in-memory storage is a
+        # process-wide singleton shared across every create_app() call in a
+        # test run, so back-to-back tests hitting /login or /register would
+        # otherwise trip each other's rate limit.
+        RATELIMIT_ENABLED=not test_config,
     )
     if test_config:
         app.config.update(test_config)
@@ -64,8 +78,13 @@ def create_app(test_config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    cors.init_app(app, resources={r'/api/*': {'origins': '*'}})
+    cors.init_app(app, resources={r'/api/*': {'origins': app.config['CORS_ORIGINS']}})
     swagger.init_app(app)
+    # In-memory storage is per-process; fine for a single dev/test process but
+    # only rate-limits per gunicorn worker in production (2 workers per
+    # render.yaml). Good enough as a first line of defense - swap for a
+    # shared Redis storage_uri if that granularity becomes a problem.
+    limiter.init_app(app)
 
     from . import models  # Register SQLAlchemy models before Flask-Migrate discovers them.
     from .models import TokenBlocklist

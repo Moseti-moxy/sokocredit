@@ -10,7 +10,7 @@ from flask_jwt_extended import (
 )
 from sqlalchemy.exc import IntegrityError
 
-from .extensions import db
+from .extensions import db, limiter
 from .models import TokenBlocklist, User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -47,6 +47,7 @@ def issue_tokens(user):
 
 
 @auth_bp.post('/register')
+@limiter.limit('10/minute')
 def register():
     """
     Register a new user
@@ -98,6 +99,7 @@ def register():
 
 
 @auth_bp.post('/login')
+@limiter.limit('10/minute')
 def login():
     """
     Log in with email and password

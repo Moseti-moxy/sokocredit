@@ -6,10 +6,11 @@ import { recordAgentActivity } from '../../data/agentDirectory';
 export const AUTH_STORAGE_KEY = 'sokocredit.auth';
 
 // Mock login/signup let the team build and test screens before the Flask
-// /auth endpoints exist (same pattern as src/data/mockData.js). Flip
-// VITE_USE_MOCK_AUTH=false in .env once the real API is ready — nothing
-// else in this file needs to change.
-const USE_MOCK_AUTH = import.meta.env.VITE_USE_MOCK_AUTH !== 'false';
+// /auth endpoints exist (same pattern as src/data/mockData.js). Only ever
+// enabled in local dev builds (import.meta.env.DEV) with the flag explicitly
+// set to 'true', so a production build can't accidentally ship with the
+// hardcoded demo credentials in mockAuth.js reachable.
+const USE_MOCK_AUTH = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH === 'true';
 
 // "Remember me" checked -> localStorage (survives closing the browser).
 // Unchecked -> sessionStorage (cleared when the tab/browser closes). We

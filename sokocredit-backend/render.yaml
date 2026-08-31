@@ -21,6 +21,11 @@ services:
           property: connectionString
       - key: JWT_SECRET_KEY
         generateValue: true
+      # Comma-separated list of your deployed frontend origin(s), e.g.
+      # https://sokocredit.example.com. Falls back to the local Vite dev
+      # server if unset - set this before going live so CORS isn't open.
+      - key: CORS_ORIGINS
+        sync: false
       # Encrypts customer PII (phone, national ID, etc.) at rest and drives
       # the blind-index lookups - see app/security.py. Losing/rotating this
       # after real data exists makes that data permanently unreadable, so
