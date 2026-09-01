@@ -45,9 +45,18 @@ export default function App() {
         <Route path="/staff/login" element={<Login portal="staff" />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Any signed-in user (agent or admin) */}
+        {/* Any signed-in user - Home is itself role-aware (customer/loan_officer/staff). */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
+        </Route>
+
+        {/* Staff-only. 'lender'/'agent'/'admin' are the real backend roles
+            (see app/security.py's ROLES); 'loan_officer' only exists in
+            mock-auth demo mode (src/data/mockAuth.js) - both are accepted so
+            neither mode locks legitimate staff out. A customer landing here
+            (e.g. by typing the URL) is bounced to "/" by ProtectedRoute,
+            same as the backend already 403s the underlying API calls. */}
+        <Route element={<ProtectedRoute allowedRoles={['admin', 'lender', 'agent', 'loan_officer']} />}>
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/new" element={<NewCustomer />} />
           <Route path="/chamas" element={<Chamas />} />
