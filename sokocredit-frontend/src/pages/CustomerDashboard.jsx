@@ -3,43 +3,16 @@ import { Banknote, CalendarDays, CheckCircle2, CircleDollarSign, CreditCard, Sen
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AppShell from '../components/AppShell';
 import StatCard from '../components/StatCard';
+import CustomerStripePayment from '../components/CustomerStripePayment';
 import { useAuth } from '../hooks/useAuth';
-import { useDispatch, useSelector } from 'react-redux';
-import { applyRepayment, generateSchedule, getInterestBreakdown, money } from '../features/loans/api/loansApi';
-import { createLoanRequestNotifications, createRepaymentNotification } from '../features/notifications/notifications';
-import { createCustomerNotification } from '../features/communications/communicationsSlice';
+import { getInterestBreakdown, money } from '../features/loans/api/loansApi';
+import { applyForLoan, getRepaymentSchedule, listOwnLoans, normalizeLoan, payViaMpesa, requestRenewal } from '../features/loans/api/customerLoansApi';
 
-const LOANS_STORAGE_KEY = 'sokocredit-loans-v2';
-const PAYABLE_STATUSES = ['Disbursed', 'Repaying'];
-
-function getAllLoans() {
-  try {
-    const loans = JSON.parse(localStorage.getItem(LOANS_STORAGE_KEY) || '[]');
-    return Array.isArray(loans) ? loans : [];
-  } catch { return []; }
-}
-
-function getApplications(customerId) {
-  return getAllLoans().filter((loan) => loan.customerId === customerId);
-}
-
-function saveApplication(application) {
-  localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify([application, ...getAllLoans()]));
-}
-
-function updateStoredLoan(loanId, changes) {
-  localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(getAllLoans().map((loan) => (loan.id === loanId ? { ...loan, ...changes } : loan))));
-}
-
-function replaceApplication(application) {
-  const stored = JSON.parse(localStorage.getItem(LOANS_STORAGE_KEY) || '[]');
-  const loans = Array.isArray(stored) ? stored : [];
-  localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(loans.map((loan) => loan.id === application.id ? application : loan)));
-}
+const PAYABLE_STATUSES = ['Approved', 'Repaying'];
 
 function getLoanSummary(loans) {
-  const activeLoans = loans.filter((loan) => PAYABLE_STATUSES.includes(loan.status));
-  const outstanding = activeLoans.reduce((total, loan) => total + Math.max(0, Number(loan.amount || 0) - Number(loan.paid || 0)), 0);
+  const activeLoans = loans.filter((loan) => loan.status === 'Repaying');
+  const outstanding = activeLoans.reduce((total, loan) => total + Number(loan.outstanding || 0), 0);
   const nextRepayment = activeLoans
     .flatMap((loan) => (loan.schedule || []).filter((item) => item.status !== 'Paid'))
     .sort((first, second) => String(first.dueDate).localeCompare(String(second.dueDate)))[0];
@@ -54,19 +27,19 @@ function displayDueDate(date) {
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-  const dispatch = useDispatch();
-  const customers = useSelector((state) => state.customers.list);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
-  const [applications, setApplications] = useState(() => getApplications(user?.id));
+  const [applications, setApplications] = useState([]);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [form, setForm] = useState({ amount: '', purpose: '', duration: '3', frequency: 'monthly' });
   const [renewalLoan, setRenewalLoan] = useState(null);
   const [renewalForm, setRenewalForm] = useState({ amount: '', duration: '3' });
   const [renewalNotice, setRenewalNotice] = useState('');
   const [error, setError] = useState('');
   const [payLoan, setPayLoan] = useState(null);
-  const [payForm, setPayForm] = useState({ amount: '', method: 'M-Pesa', reference: '' });
+  const [payForm, setPayForm] = useState({ amount: '', method: 'M-Pesa', phoneNumber: '' });
   const [payError, setPayError] = useState('');
   const [paySuccess, setPaySuccess] = useState('');
+  const [paySubmitting, setPaySubmitting] = useState(false);
   const [interestLoan, setInterestLoan] = useState(null);
   const pendingApplication = applications.find((loan) => loan.status === 'Pending');
   const { outstanding, nextRepayment } = useMemo(() => getLoanSummary(applications), [applications]);
@@ -77,73 +50,91 @@ export default function CustomerDashboard() {
   }, [user?.dailyProfit]);
   const interestBreakdown = useMemo(() => (interestLoan ? getInterestBreakdown(interestLoan) : null), [interestLoan]);
 
+  async function loadApplications() {
+    const rawLoans = await listOwnLoans();
+    return Promise.all(rawLoans.map(async (loan) => {
+      const schedule = await getRepaymentSchedule(loan.id).catch(() => ({ repaymentSchedule: [], outstandingBalance: 0 }));
+      return normalizeLoan(loan, schedule, rawLoans);
+    }));
+  }
+
+  // Reusable after a mutation (submitRequest/submitRenewal/a Stripe payment) -
+  // degrades quietly on failure, since a stale list is better than a crash.
+  async function refreshApplications() {
+    try {
+      setApplications(await loadApplications());
+    } catch { /* keep the previous list */ }
+  }
+
   useEffect(() => {
-    const refresh = () => setApplications(getApplications(user?.id));
-    const onStorage = (event) => { if (event.key === LOANS_STORAGE_KEY) refresh(); };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [user?.id]);
+    loadApplications().then(setApplications).catch(() => {});
+  }, []);
 
   function updateField(field, value) { setError(''); setForm((current) => ({ ...current, [field]: value })); }
   function openRenewal(loan) { setRenewalLoan(loan); setRenewalForm({ amount: String(Math.round(Number(loan.amount || 0) * 1.25)), duration: String(loan.duration || 3) }); }
-  function submitRenewal(event) {
+  async function submitRenewal(event) {
     event.preventDefault(); const amount = Number(renewalForm.amount); const duration = Number(renewalForm.duration);
     if (!renewalLoan || !Number.isFinite(amount) || amount < 1000 || !Number.isFinite(duration) || duration < 1 || duration > 24) { setError('Enter a valid renewal amount and term.'); return; }
-    const updated = { ...renewalLoan, renewalRequested: true, renewalAmount: amount, renewalDuration: duration, renewalRequestedAt: new Date().toISOString().slice(0, 10) };
-    replaceApplication(updated); setApplications((items) => items.map((loan) => loan.id === updated.id ? updated : loan)); setRenewalLoan(null); setRenewalNotice(`Your renewal request for KES ${money(amount)} has been sent for review.`);
+    try {
+      await requestRenewal(renewalLoan.id, {
+        amount, duration, durationUnit: 'months', repaymentFrequency: renewalLoan.frequency,
+        interestRate: renewalLoan.interestRate, purpose: renewalLoan.purpose,
+      });
+      await refreshApplications();
+      setRenewalLoan(null);
+      setRenewalNotice(`Your renewal request for KES ${money(amount)} has been sent for review.`);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Could not submit the renewal request. Please try again.');
+    }
   }
-  function submitRequest(event) {
+  async function submitRequest(event) {
     event.preventDefault();
     const amount = Number(form.amount); const duration = Number(form.duration);
     if (!Number.isFinite(amount) || amount < 1000 || amount > estimatedLimit || !form.purpose.trim() || !Number.isFinite(duration) || duration < 1 || duration > 24) {
       setError(`Enter an amount between KES 1,000 and your estimated eligibility of KES ${money(estimatedLimit)}, your loan purpose, and a term of 1–24 months.`); return;
     }
-    const customerName = user?.name || 'SokoCredit customer';
-    const chamaName = user?.chama && user.chama !== 'No Chama / Individual Borrower' ? user.chama : ''; const chamaMemberCount = chamaName ? customers.filter((customer) => customer.chama === chamaName).length : 0;
-    const application = { id: `L-${Date.now().toString().slice(-6)}`, customerId: user?.id, customer: customerName, initials: customerName.split(' ').map((name) => name[0]).join('').slice(0, 2).toUpperCase(), business: user?.business || 'Market trader', amount, interestRate: 10, duration, frequency: form.frequency, purpose: form.purpose.trim(), loanType: 'individual', chamaName, chamaMemberCount, paid: 0, progress: 0, status: 'Pending', due: 'Awaiting approval', appliedAt: new Date().toISOString().slice(0, 10), schedule: generateSchedule({ amount, interestRate: 10, duration, frequency: form.frequency }) };
-    saveApplication(application);
-    createLoanRequestNotifications(application);
-    dispatch(createCustomerNotification({
-      userId: user?.id,
-      type: 'application_received',
-      title: 'Loan Application Received',
-      body: `We have received your loan request for KES ${amount.toLocaleString()}. Our team will review it and update you shortly.`,
-      refId: application.id,
-      deliveryChannel: 'WhatsApp',
-    }));
-    setApplications((current) => [application, ...current]); setIsRequestOpen(false); setForm({ amount: '', purpose: '', duration: '3', frequency: 'monthly' });
+    setRequestSubmitting(true);
+    try {
+      await applyForLoan({ amount, interestRate: 10, duration, durationUnit: 'months', repaymentFrequency: form.frequency, purpose: form.purpose.trim() });
+      await refreshApplications();
+      setIsRequestOpen(false); setForm({ amount: '', purpose: '', duration: '3', frequency: 'monthly' });
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Could not submit your loan request. Please try again.');
+    } finally {
+      setRequestSubmitting(false);
+    }
   }
 
   function openPayment(loan) {
     const nextItem = (loan.schedule || []).find((item) => item.status !== 'Paid');
-    const loanOutstanding = Math.max(0, Number(loan.amount || 0) - Number(loan.paid || 0));
-    const defaultAmount = nextItem ? Math.max(0, Number(nextItem.amount) - Number(nextItem.paidAmount || 0)) : loanOutstanding;
-    setPayForm({ amount: defaultAmount ? String(Math.round(defaultAmount * 100) / 100) : '', method: 'M-Pesa', reference: '' });
+    const defaultAmount = nextItem ? Math.max(0, Number(nextItem.amount) - Number(nextItem.paidAmount || 0)) : loan.outstanding;
+    setPayForm({ amount: defaultAmount ? String(Math.round(defaultAmount * 100) / 100) : '', method: 'M-Pesa', phoneNumber: user?.phoneNumber || '' });
     setPayError(''); setPaySuccess(''); setPayLoan(loan);
   }
   function updatePayField(field, value) { setPayError(''); setPayForm((current) => ({ ...current, [field]: value })); }
-  function submitPayment(event) {
+  const payAmount = Number(payForm.amount);
+  const payAmountValid = payLoan && Number.isFinite(payAmount) && payAmount >= 1 && payAmount <= payLoan.outstanding;
+
+  async function submitPayment(event) {
     event.preventDefault();
-    const amount = Number(payForm.amount);
-    const loanOutstanding = Math.max(0, Number(payLoan.amount || 0) - Number(payLoan.paid || 0));
-    if (!Number.isFinite(amount) || amount < 1 || amount > loanOutstanding) {
-      setPayError(`Enter an amount between KES 1 and your outstanding balance of KES ${money(loanOutstanding)}.`); return;
+    if (!payAmountValid) {
+      setPayError(`Enter an amount between KES 1 and your outstanding balance of KES ${money(payLoan.outstanding)}.`); return;
     }
-    if (payForm.method === 'M-Pesa' && !payForm.reference.trim()) { setPayError('Enter the M-Pesa confirmation code for this payment.'); return; }
-    const result = applyRepayment(payLoan, { amount, method: payForm.method, reference: payForm.reference.trim() });
-    if (!result) { setPayError('This loan has no outstanding repayment balance.'); return; }
-    updateStoredLoan(payLoan.id, result.changes);
-    createRepaymentNotification({ customer: user?.name || 'Customer', amount: result.applied, loanId: payLoan.id });
-    dispatch(createCustomerNotification({
-      userId: user?.id,
-      type: 'payment_confirmation',
-      title: 'Payment received',
-      body: `We received your KES ${result.applied.toLocaleString()} payment for loan ${payLoan.id} via ${payForm.method}.`,
-      refId: payLoan.id,
-      deliveryChannel: 'WhatsApp',
-    }));
-    setApplications((current) => current.map((loan) => (loan.id === payLoan.id ? { ...loan, ...result.changes } : loan)));
-    setPaySuccess(`Payment of KES ${money(result.applied)} recorded. Thank you!`);
+    if (!payForm.phoneNumber.trim()) { setPayError('Enter the M-Pesa phone number to receive the payment prompt on.'); return; }
+    setPaySubmitting(true);
+    try {
+      await payViaMpesa(payLoan.id, { amount: payAmount, phoneNumber: payForm.phoneNumber.trim() });
+      setPaySuccess(`STK push sent to ${payForm.phoneNumber}. Enter your M-Pesa PIN on your phone to complete the KES ${money(payAmount)} payment.`);
+    } catch (err) {
+      setPayError(err?.response?.data?.error || 'Could not start the M-Pesa payment. Please try again.');
+    } finally {
+      setPaySubmitting(false);
+    }
+  }
+
+  function handleStripeSuccess() {
+    setPaySuccess('Card payment received. Thank you!');
+    refreshApplications();
     setTimeout(() => setPayLoan(null), 1500);
   }
 
@@ -159,11 +150,11 @@ export default function CustomerDashboard() {
       {renewalNotice && <p role="status" className="mt-4 rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-800">{renewalNotice}</p>}
       {applications.length ? <div className="mt-4 grid gap-3">{applications.map((loan) => {
         const canPay = PAYABLE_STATUSES.includes(loan.status);
-        const canViewInterest = ['Disbursed', 'Repaying', 'Closed'].includes(loan.status) && loan.interestRate;
-        const canRenew = loan.status === 'Repaying' && !loan.renewalRequested;
+        const canViewInterest = ['Approved', 'Repaying', 'Closed'].includes(loan.status) && loan.interestRate;
+        const canRenew = ['Repaying', 'Closed'].includes(loan.status) && loan.outstanding === 0 && !loan.renewalRequested;
         return <article key={loan.id} className="rounded-xl border border-brand-100 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${loan.loanType === 'chama' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700'}`}>{loan.loanType === 'chama' ? 'Chama group loan' : 'Individual loan'}</span><p className="mt-2 font-semibold text-slate-900">KES {money(loan.amount)} <span className="font-normal text-slate-500">· {loan.purpose || 'Loan request'}</span></p><p className="mt-1 text-xs text-slate-500">Requested {loan.appliedAt} · {loan.duration} months · {loan.frequency}</p>{loan.rejectionReason && <p className="mt-2 text-xs text-red-600">Reason: {loan.rejectionReason}</p>}{loan.renewalRequested && <p className="mt-2 text-xs text-brand-700">Renewal request: KES {money(loan.renewalAmount)} for {loan.renewalDuration} months · Under review</p>}</div>
+            <div><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Individual loan</span><p className="mt-2 font-semibold text-slate-900">KES {money(loan.amount)} <span className="font-normal text-slate-500">· {loan.purpose || 'Loan request'}</span></p><p className="mt-1 text-xs text-slate-500">Requested {loan.appliedAt} · {loan.duration} months · {loan.frequency}</p>{loan.rejectionReason && <p className="mt-2 text-xs text-red-600">Reason: {loan.rejectionReason}</p>}{loan.renewalRequested && <p className="mt-2 text-xs text-brand-700">Renewal requested · Under review</p>}</div>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${loan.status === 'Rejected' ? 'bg-red-50 text-red-700' : loan.status === 'Pending' ? 'bg-amber-50 text-amber-700' : loan.status === 'Repaying' ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-700'}`}>{loan.status}</span>
           </div>
           {(canPay || canViewInterest || canRenew) && <div className="mt-3 flex flex-wrap gap-2 border-t border-brand-50 pt-3">
@@ -174,9 +165,12 @@ export default function CustomerDashboard() {
         </article>;
       })}</div> : <p className="mt-4 text-sm text-slate-500">You have not submitted any loan requests yet.</p>}
     </section>
-    {isRequestOpen && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="loan-request-title"><form onSubmit={submitRequest} noValidate className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="loan-request-title" className="font-display text-xl font-semibold text-slate-900">Request a loan</h2><p className="mt-1 text-sm text-slate-500">Your request will be sent to an agent for review.</p></div><button type="button" onClick={() => setIsRequestOpen(false)} aria-label="Close loan request form" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div><p className="mt-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">Based on the financial information in your profile, your estimated eligibility is up to <strong>KES {money(estimatedLimit)}</strong>. This is an estimate, not a loan approval.</p><div className="mt-5 grid gap-4"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Amount needed (KES)<input className="app-field h-11 px-3" type="number" min="1000" max={estimatedLimit} value={form.amount} onChange={(event) => updateField('amount', event.target.value)} placeholder="e.g. 25,000" required /></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">What will you use the loan for?<textarea className="app-field min-h-24 px-3 py-2" value={form.purpose} onChange={(event) => updateField('purpose', event.target.value)} placeholder="e.g. Buy stock for my business" required /></label><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Repayment term<select className="app-field h-11 px-3" value={form.duration} onChange={(event) => updateField('duration', event.target.value)}><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option><option value="24">24 months</option></select></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">Repayment frequency<select className="app-field h-11 px-3" value={form.frequency} onChange={(event) => updateField('frequency', event.target.value)}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label></div></div>{error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}<button type="submit" className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-sm font-semibold text-white transition-colors hover:bg-brand-600"><Send size={17} /> Submit loan request</button></form></div>}
-    {payLoan && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="pay-loan-title"><form onSubmit={submitPayment} noValidate className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="pay-loan-title" className="font-display text-xl font-semibold text-slate-900">Make a payment</h2><p className="mt-1 text-sm text-slate-500">Loan {payLoan.id} · Outstanding KES {money(Math.max(0, Number(payLoan.amount || 0) - Number(payLoan.paid || 0)))}</p></div><button type="button" onClick={() => setPayLoan(null)} aria-label="Close payment form" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div><div className="mt-5 grid gap-4"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Amount to pay (KES)<input className="app-field h-11 px-3" type="number" min="1" step="0.01" value={payForm.amount} onChange={(event) => updatePayField('amount', event.target.value)} required /></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">Payment method<select className="app-field h-11 px-3" value={payForm.method} onChange={(event) => updatePayField('method', event.target.value)}><option>M-Pesa</option><option>Cash</option></select></label>{payForm.method === 'M-Pesa' && <label className="grid gap-1.5 text-sm font-medium text-slate-700">M-Pesa confirmation code<input className="app-field h-11 px-3" value={payForm.reference} onChange={(event) => updatePayField('reference', event.target.value)} placeholder="e.g. QCX7T9K2LM" required /></label>}</div>{payError && <p role="alert" className="mt-4 text-sm text-red-600">{payError}</p>}{paySuccess && <p role="status" className="mt-4 text-sm font-medium text-brand-700">{paySuccess}</p>}<button type="submit" disabled={Boolean(paySuccess)} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><Wallet size={17} /> Confirm payment</button></form></div>}
-    {interestLoan && interestBreakdown && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="interest-title"><div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="interest-title" className="font-display text-xl font-semibold text-slate-900">Interest growth</h2><p className="mt-1 text-sm text-slate-500">Loan {interestLoan.id} · KES {money(interestBreakdown.principal)} at {interestLoan.interestRate}% for {interestLoan.duration} months</p></div><button type="button" onClick={() => setInterestLoan(null)} aria-label="Close interest growth" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div>
+    {isRequestOpen && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="loan-request-title"><form onSubmit={submitRequest} noValidate className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="loan-request-title" className="font-display text-xl font-semibold text-slate-900">Request a loan</h2><p className="mt-1 text-sm text-slate-500">Your request will be sent to an agent for review.</p></div><button type="button" onClick={() => setIsRequestOpen(false)} aria-label="Close loan request form" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div><p className="mt-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">Based on the financial information in your profile, your estimated eligibility is up to <strong>KES {money(estimatedLimit)}</strong>. This is an estimate, not a loan approval.</p><div className="mt-5 grid gap-4"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Amount needed (KES)<input className="app-field h-11 px-3" type="number" min="1000" max={estimatedLimit} value={form.amount} onChange={(event) => updateField('amount', event.target.value)} placeholder="e.g. 25,000" required /></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">What will you use the loan for?<textarea className="app-field min-h-24 px-3 py-2" value={form.purpose} onChange={(event) => updateField('purpose', event.target.value)} placeholder="e.g. Buy stock for my business" required /></label><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Repayment term<select className="app-field h-11 px-3" value={form.duration} onChange={(event) => updateField('duration', event.target.value)}><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option><option value="24">24 months</option></select></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">Repayment frequency<select className="app-field h-11 px-3" value={form.frequency} onChange={(event) => updateField('frequency', event.target.value)}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label></div></div>{error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}<button type="submit" disabled={requestSubmitting} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><Send size={17} /> {requestSubmitting ? 'Submitting…' : 'Submit loan request'}</button></form></div>}
+    {payLoan && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="pay-loan-title"><form onSubmit={submitPayment} noValidate className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="pay-loan-title" className="font-display text-xl font-semibold text-slate-900">Make a payment</h2><p className="mt-1 text-sm text-slate-500">Loan {payLoan.id.slice(0, 8)} · Outstanding KES {money(payLoan.outstanding)}</p></div><button type="button" onClick={() => setPayLoan(null)} aria-label="Close payment form" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div><div className="mt-5 grid gap-4"><label className="grid gap-1.5 text-sm font-medium text-slate-700">Amount to pay (KES)<input className="app-field h-11 px-3" type="number" min="1" step="0.01" value={payForm.amount} onChange={(event) => updatePayField('amount', event.target.value)} required /></label><label className="grid gap-1.5 text-sm font-medium text-slate-700">Payment method<select className="app-field h-11 px-3" value={payForm.method} onChange={(event) => updatePayField('method', event.target.value)}><option>M-Pesa</option><option>Stripe</option></select></label>{payForm.method === 'M-Pesa' && <label className="grid gap-1.5 text-sm font-medium text-slate-700">M-Pesa phone number<input className="app-field h-11 px-3" value={payForm.phoneNumber} onChange={(event) => updatePayField('phoneNumber', event.target.value)} placeholder="e.g. 0712345678" required /></label>}</div>{payError && <p role="alert" className="mt-4 text-sm text-red-600">{payError}</p>}{paySuccess && <p role="status" className="mt-4 text-sm font-medium text-brand-700">{paySuccess}</p>}
+      {payForm.method === 'M-Pesa' && !paySuccess && <button type="submit" disabled={paySubmitting} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><Wallet size={17} /> {paySubmitting ? 'Sending prompt…' : 'Send M-Pesa prompt'}</button>}
+      {payForm.method === 'Stripe' && !paySuccess && payAmountValid && <CustomerStripePayment loanId={payLoan.id} amountKES={payAmount} onSuccess={handleStripeSuccess} onError={setPayError} />}
+    </form></div>}
+    {interestLoan && interestBreakdown && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="interest-title"><div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="interest-title" className="font-display text-xl font-semibold text-slate-900">Interest growth</h2><p className="mt-1 text-sm text-slate-500">Loan {interestLoan.id.slice(0, 8)} · KES {money(interestBreakdown.principal)} at {interestLoan.interestRate}% for {interestLoan.duration} months</p></div><button type="button" onClick={() => setInterestLoan(null)} aria-label="Close interest growth" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div>
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl bg-brand-50 p-3"><p className="text-xs text-brand-600">Total interest</p><p className="mt-1 font-display text-lg font-semibold text-brand-800">KES {money(interestBreakdown.interestTotal)}</p></div>
         <div className="rounded-xl bg-amber-50 p-3"><p className="text-xs text-amber-600">Interest paid</p><p className="mt-1 font-display text-lg font-semibold text-amber-800">KES {money(interestBreakdown.interestPaid)}</p></div>
