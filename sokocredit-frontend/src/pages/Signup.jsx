@@ -39,8 +39,17 @@ export default function Signup() {
     // Normalize the National ID first so spaces and punctuation cannot bypass validation.
     const nationalId = form.nationalId.replace(/\D/g, '');
     const email = form.email.trim();
-    // Validate the required KYC and business details before sending data to Redux/API.
-    if (!form.name.trim() || form.phone.replace(/\D/g, '').length < 10 || !/^(\d{7,8}|\d{14})$/.test(nationalId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !form.stall.trim() || Number(form.dailyTurnover) <= 0 || !/^\d{4,8}$/.test(form.pin)) return setFormError('Complete the required trader details, enter a valid Kenyan National ID number (7–8 digit ID or 14-digit Maisha Namba), a valid email address, and choose a 4–8 digit PIN.');
+    // Name each invalid field so an agent can correct the form without having
+    // to guess which part of the broad onboarding validation failed.
+    const invalidFields = [];
+    if (!form.name.trim()) invalidFields.push('full legal name');
+    if (form.phone.replace(/\D/g, '').length < 10) invalidFields.push('M-Pesa phone number');
+    if (!/^(\d{7,8}|\d{14})$/.test(nationalId)) invalidFields.push('Kenyan National ID (7–8 digits or a 14-digit Maisha Namba)');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) invalidFields.push('email address');
+    if (!form.stall.trim()) invalidFields.push('stall / kiosk number');
+    if (Number(form.dailyTurnover) <= 0) invalidFields.push('daily cash turnover');
+    if (!/^\d{4,8}$/.test(form.pin)) invalidFields.push('PIN (4–8 digits)');
+    if (invalidFields.length) return setFormError(`Please correct: ${invalidFields.join(', ')}.`);
     // Prevent common, easily guessed PINs even when their length is valid.
     if (UNSAFE_PINS.has(form.pin)) return setFormError('Choose a less predictable PIN. Common PINs such as 1234 can be reported as compromised by your browser.');
     // Keep sign-in credentials separate from the wider customer/business profile.
