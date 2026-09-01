@@ -6,7 +6,9 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const apiClient = axios.create({
   baseURL,
-  timeout: 15000,
+  // Render's free instances can take longer than 15 seconds to wake after
+  // inactivity.  Do not turn a cold start into a failed trader registration.
+  timeout: 60000,
 });
 
 function readStoredToken() {

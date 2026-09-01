@@ -17,6 +17,16 @@ export const registerCustomer = createAsyncThunk(
     try {
       return await customersApi.createCustomer(payload);
     } catch (requestError) {
+      if (requestError.code === 'ECONNABORTED') {
+        return rejectWithValue(
+          'The customer service is starting up. Please wait a moment and try saving the trader again.'
+        );
+      }
+      if (requestError.code === 'ERR_NETWORK') {
+        return rejectWithValue(
+          'The customer service cannot be reached. Check the API deployment and try again.'
+        );
+      }
       return rejectWithValue(
         requestError.response?.data?.error || 'Could not register this trader. Please try again.'
       );
