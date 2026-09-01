@@ -86,6 +86,14 @@ def create_app(test_config=None):
     # shared Redis storage_uri if that granularity becomes a problem.
     limiter.init_app(app)
 
+    from .security import SecurityConfigurationError
+
+    @app.errorhandler(SecurityConfigurationError)
+    def security_configuration_error(_error):
+        # Never expose key names or stack traces to clients. A missing key is a
+        # deployment/readiness problem, not a bad customer submission.
+        return jsonify(error='The customer data service is temporarily unavailable. Please contact support.'), 503
+
     from . import models  # Register SQLAlchemy models before Flask-Migrate discovers them.
     from .models import TokenBlocklist
 

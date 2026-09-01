@@ -71,7 +71,7 @@ export default function Login({ portal = 'customer' }) {
           </div>
 
           <h1 className="font-display text-2xl font-semibold text-slate-900 mb-1">{portal === 'staff' ? 'Staff sign in' : 'Customer sign in'}</h1>
-          <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Agents sign in with their email and PIN. Administrators use the same secure staff portal.' : 'Sign in with your registered email or National ID number and your PIN.'}</p>
+          <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Agents and administrators sign in with their email and password.' : 'Sign in with your registered email or National ID number and your PIN.'}</p>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
@@ -103,7 +103,7 @@ export default function Login({ portal = 'customer' }) {
               </div>
             </div>
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-slate-500 mb-1.5">PIN</label>
+              <label htmlFor="password" className="block text-xs font-medium text-slate-500 mb-1.5">{isCustomer ? 'PIN' : 'Password'}</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -113,8 +113,8 @@ export default function Login({ portal = 'customer' }) {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="••••"
+                  inputMode={isCustomer ? 'numeric' : undefined}
+                  placeholder={isCustomer ? '••••' : 'Your password'}
                   required
                   className="w-full pl-9 pr-3 py-3 rounded-xl border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />

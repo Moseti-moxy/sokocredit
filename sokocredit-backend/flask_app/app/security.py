@@ -18,6 +18,10 @@ from sqlalchemy.types import String, TypeDecorator
 ROLES = ('admin', 'lender', 'agent')
 
 
+class SecurityConfigurationError(RuntimeError):
+    """Raised when a required production data-protection setting is absent."""
+
+
 def hash_password(password):
     if bcrypt:
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -125,7 +129,7 @@ def current_customer_id():
 def _blind_index_pepper():
     pepper = os.environ.get('FIELD_ENCRYPTION_KEY')
     if not pepper:
-        raise RuntimeError('FIELD_ENCRYPTION_KEY is not set; required for blind-index lookups too.')
+        raise SecurityConfigurationError('FIELD_ENCRYPTION_KEY is not set; required for blind-index lookups too.')
     return pepper.encode('utf-8')
 
 
@@ -148,7 +152,7 @@ def blind_index(value):
 def _fernet():
     key = os.environ.get('FIELD_ENCRYPTION_KEY')
     if not key:
-        raise RuntimeError(
+        raise SecurityConfigurationError(
             'FIELD_ENCRYPTION_KEY is not set. Generate one with: '
             'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         )

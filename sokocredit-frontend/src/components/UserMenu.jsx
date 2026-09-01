@@ -69,7 +69,7 @@ export default function UserMenu() {
             className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-brand-50"
           >
             <KeyRound size={15} />
-            Change PIN
+            Change {role === 'customer' ? 'PIN' : 'password'}
           </button>
           <button
             role="menuitem"
@@ -81,7 +81,7 @@ export default function UserMenu() {
           </button>
         </div>
       )}
-      {isChangePinOpen && <ChangePinModal user={user} onClose={() => setIsChangePinOpen(false)} />}
+      {isChangePinOpen && <ChangePinModal role={role} onClose={() => setIsChangePinOpen(false)} />}
     </div>
   );
 }

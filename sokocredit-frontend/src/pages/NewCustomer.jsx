@@ -21,6 +21,7 @@ export default function NewCustomer() {
     event.preventDefault();
     if (submitting) return;
     if (!form.name.trim() || form.phone.replace(/\D/g, '').length < 10 || !form.nationalId.trim() || !form.market || !form.stall.trim() || Number(form.dailyTurnover) <= 0) return setError('Complete the required personal, market, stall, and daily-turnover details.');
+    if (Number(form.dailyProfit || 0) > Number(form.dailyTurnover)) return setError('Estimated daily net profit cannot be higher than daily cash turnover.');
     setSubmitting(true); setError('');
     try {
       const customer = await dispatch(registerCustomer({

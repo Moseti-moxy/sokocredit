@@ -1,6 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
+import { apiClient } from '../../api/client';
 import authReducer, { loginUser, logout, AUTH_STORAGE_KEY } from './authSlice';
+
+vi.mock('../../api/client', () => ({
+  apiClient: { post: vi.fn() },
+}));
 
 function buildStore() {
   return configureStore({ reducer: { auth: authReducer } });
@@ -11,6 +16,13 @@ describe('authSlice', () => {
     // Storage is part of the auth contract, so each test starts independently.
     localStorage.clear();
     sessionStorage.clear();
+    apiClient.post.mockReset();
+    apiClient.post.mockResolvedValue({
+      data: {
+        accessToken: 'test-access-token',
+        user: { id: 'user-1', fullName: 'Amina Agent', role: 'agent' },
+      },
+    });
   });
 
   it('starts signed out with no persisted session', () => {
@@ -24,21 +36,22 @@ describe('authSlice', () => {
   it('login success: sets token, user, and role, and clears any error', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-0001', password: '1234', remember: true, portal: 'staff' })
+      loginUser({ identifier: 'amina@sokocredit.co.ke', password: 'SecurePass1', remember: true, portal: 'staff' })
     );
 
     const state = store.getState().auth;
     expect(state.status).toBe('idle');
     expect(state.error).toBeNull();
     expect(state.token).toBeTruthy();
-    expect(state.user).toMatchObject({ id: 'AGT-0001', role: 'agent' });
+    expect(state.user).toMatchObject({ id: 'user-1', role: 'agent', name: 'Amina Agent' });
     expect(state.role).toBe('agent');
   });
 
   it('login failure: wrong password sets an error and leaves the user signed out', async () => {
+    apiClient.post.mockRejectedValueOnce({ response: { data: { error: 'Invalid email or password.' } } });
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-0001', password: 'wrong-password', remember: true, portal: 'staff' })
+      loginUser({ identifier: 'amina@sokocredit.co.ke', password: 'wrong-password', remember: true, portal: 'staff' })
     );
 
     const state = store.getState().auth;
@@ -49,9 +62,10 @@ describe('authSlice', () => {
   });
 
   it('login failure: unknown identifier is also rejected', async () => {
+    apiClient.post.mockRejectedValueOnce({ response: { data: { error: 'Invalid email or password.' } } });
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'NOBODY-0000', password: '1234', remember: true, portal: 'staff' })
+      loginUser({ identifier: 'nobody@sokocredit.co.ke', password: 'SecurePass1', remember: true, portal: 'staff' })
     );
 
     const state = store.getState().auth;
@@ -62,7 +76,7 @@ describe('authSlice', () => {
   it('token storage: remember=true persists to localStorage, not sessionStorage', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-0001', password: '1234', remember: true, portal: 'staff' })
+      loginUser({ identifier: 'amina@sokocredit.co.ke', password: 'SecurePass1', remember: true, portal: 'staff' })
     );
 
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeTruthy();
@@ -72,7 +86,7 @@ describe('authSlice', () => {
   it('token storage: remember=false persists to sessionStorage, not localStorage', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'AGT-0001', password: '1234', remember: false, portal: 'staff' })
+      loginUser({ identifier: 'amina@sokocredit.co.ke', password: 'SecurePass1', remember: false, portal: 'staff' })
     );
 
     expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeTruthy();
@@ -82,7 +96,7 @@ describe('authSlice', () => {
   it('logout clears state and both storage locations', async () => {
     const store = buildStore();
     await store.dispatch(
-      loginUser({ identifier: 'ADM-0001', password: '1001', remember: true, portal: 'staff' })
+      loginUser({ identifier: 'admin@sokocredit.co.ke', password: 'SecurePass1', remember: true, portal: 'staff' })
     );
     expect(store.getState().auth.token).toBeTruthy();
 
