@@ -1,4 +1,5 @@
-import { apiClient } from '../../api/client';
+import { apiClient, USE_MOCK_AUTH } from '../../api/client';
+import { loans as demoLoans } from '../../data/mockData';
 
 function isApiUnavailable(error) {
   return error?.response?.status === 502 || error?.code === 'ERR_NETWORK';
@@ -12,7 +13,8 @@ export async function getRenewalSuggestions() {
     const { data } = await apiClient.get('/risk/renewal-suggestions');
     return data.suggestions || [];
   } catch (error) {
-    if (isApiUnavailable(error)) return [];
+    const status = error?.response?.status;
+    if (isApiUnavailable(error) || USE_MOCK_AUTH || status === 401 || status === 422) return demoLoans || [];
     throw error;
   }
 }

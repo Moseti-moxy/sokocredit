@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage } from '../utils/i18n';
+import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage, t } from '../utils/i18n';
 import { Globe } from 'lucide-react';
+import useTranslation from '../hooks/useTranslation';
 
 export default function LanguageSettings() {
-  const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
+  const { lang: currentLang } = useTranslation();
+  const [, setLocal] = useState(currentLang); // local setter used when user clicks a button
 
   useEffect(() => {
     const handleLanguageChange = (event) => {
-      setCurrentLang(event.detail.lang);
+      setLocal(event.detail.lang);
     };
     window.addEventListener('language-changed', handleLanguageChange);
     return () => window.removeEventListener('language-changed', handleLanguageChange);
