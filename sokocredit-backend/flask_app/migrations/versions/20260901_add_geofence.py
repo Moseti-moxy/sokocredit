@@ -1,7 +1,7 @@
 """add geofence columns and table
 
 Revision ID: 20260901_add_geofence
-Revises: f8ac24fba947
+Revises: 9bdbc9bc3824
 Create Date: 2026-09-01 00:00:00.000000
 
 """
@@ -10,16 +10,15 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20260901_add_geofence'
-down_revision = 'f8ac24fba947'
+down_revision = '9bdbc9bc3824'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    # Add columns to customers
+    # ``latitude`` and ``longitude`` were added by migration
+    # 8141b9676fdb. Add only the geofence-specific fields here.
     with op.batch_alter_table('customers', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('latitude', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('longitude', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('registered_lat', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('registered_lng', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('zone_radius_m', sa.Integer(), nullable=False, server_default='200'))
@@ -43,5 +42,3 @@ def downgrade():
         batch_op.drop_column('zone_radius_m')
         batch_op.drop_column('registered_lng')
         batch_op.drop_column('registered_lat')
-        batch_op.drop_column('longitude')
-        batch_op.drop_column('latitude')
