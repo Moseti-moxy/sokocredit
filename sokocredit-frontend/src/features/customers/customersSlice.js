@@ -11,7 +11,18 @@ export const loadCustomerDetail = createAsyncThunk('customers/loadDetail', async
   return { customerId, creditProfile };
 });
 
-export const registerCustomer = createAsyncThunk('customers/register', (payload) => customersApi.createCustomer(payload));
+export const registerCustomer = createAsyncThunk(
+  'customers/register',
+  async (payload, { rejectWithValue }) => {
+    try {
+      return await customersApi.createCustomer(payload);
+    } catch (requestError) {
+      return rejectWithValue(
+        requestError.response?.data?.error || 'Could not register this trader. Please try again.'
+      );
+    }
+  }
+);
 
 export const uploadCustomerDocument = createAsyncThunk(
   'customers/uploadDocument',

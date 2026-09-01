@@ -43,7 +43,7 @@ export default function NewCustomer() {
       })).unwrap();
       navigate(`/customers?customer=${encodeURIComponent(customer.id)}`);
     } catch (err) {
-      setError(err?.response?.data?.error || err?.message || 'Could not register this trader. Please try again.');
+      setError(typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Could not register this trader. Please try again.');
     } finally {
       setSubmitting(false);
     }
