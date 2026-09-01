@@ -13,6 +13,8 @@ from .models import (
     MpesaStkRequest, Repayment, RepaymentScheduleItem, StripePaymentIntent,
 )
 from .mpesa import MpesaConfigurationError, MpesaError, initiate_stk_push, normalize_phone_number
+from .notification_routes import create_notification
+from .notifications import NotificationConfigurationError, NotificationError, send_sms
 from .reports import generate_customer_statement_pdf, generate_loan_statement_pdf, generate_receipt_pdf
 from .security import blind_index, role_required
 from .services import decimal, schedule_terms
@@ -463,6 +465,17 @@ def disburse(loan_id):
     loan.status = 'ACTIVE'
     db.session.add(disbursement)
     log_action('DISBURSE_LOAN', 'Loan', loan.id, {'amount': float(amount), 'method': disbursement.method})
+    customer = db.session.get(Customer, loan.customer_id)
+    if customer:
+        message = f'KES {amount:,.2f} has been disbursed to you for loan {loan.id[:8]}.'
+        create_notification(
+            customer_id=customer.id, type='LOAN_DISBURSED', title='Loan disbursed',
+            message=message, related_entity_type='Loan', related_entity_id=loan.id,
+        )
+        try:
+            send_sms(customer.phone_number, message)
+        except (NotificationConfigurationError, NotificationError):
+            pass  # SMS is best-effort; the disbursement itself must not fail because of it.
     db.session.commit()
     return jsonify(loan=serialize_loan(loan), disbursement={'id': disbursement.id, 'amount': float(disbursement.amount), 'method': disbursement.method, 'reference': disbursement.reference, 'disbursedAt': disbursement.disbursed_at.isoformat()}), 201
 

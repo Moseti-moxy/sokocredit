@@ -328,6 +328,29 @@ class RiskAlert(db.Model):
     loan = db.relationship('Loan')
 
 
+class Notification(db.Model):
+    """A staff-broadcast or customer-targeted notification (loan requested,
+    disbursed, payment overdue, ...). Exactly one of audience_role/customer_id
+    is set per row. read_by is a list of user/customer ids who've dismissed it,
+    not a single flag - so one role-broadcast row can be read independently by
+    several staff members, the same way the notification bell's previous
+    localStorage-only implementation tracked readBy per notification."""
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    audience_role = db.Column(db.String(16), index=True)
+    customer_id = db.Column(db.String(36), db.ForeignKey('customers.id'), index=True)
+    type = db.Column(db.String(32), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    related_entity_type = db.Column(db.String(32))
+    related_entity_id = db.Column(db.String(36), index=True)
+    read_by = db.Column(db.JSON, nullable=False, default=list)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+
+    customer = db.relationship('Customer')
+
+
 class CollectionTarget(db.Model):
     """A lender-set collection goal for a period (daily/weekly/monthly), compared
     against actual repayments received in that window to compute achievement %."""

@@ -123,6 +123,7 @@ def create_app(test_config=None):
     from .geofence_routes import geofence
     from .customer_portal_routes import customer_portal
     from .groups_routes import groups
+    from .notification_routes import notifications_bp
     from .reminders_routes import reminders
     from .risk_routes import risk
     from .routes import api
@@ -142,5 +143,9 @@ def create_app(test_config=None):
     app.register_blueprint(geofence)
     app.register_blueprint(customer_portal)
     app.register_blueprint(whatsapp)
+    app.register_blueprint(notifications_bp)
+
+    from cli import send_overdue_reminders
+    app.cli.add_command(send_overdue_reminders)
 
     return app

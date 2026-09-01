@@ -22,6 +22,7 @@ from .extensions import db
 from .i18n import current_lang
 from .models import AirtelMoneyRequest, Customer, Loan, MpesaStkRequest, StripePaymentIntent
 from .mpesa import MpesaConfigurationError, MpesaError, initiate_stk_push, normalize_phone_number
+from .notification_routes import notify_roles
 from .reports import generate_loan_statement_pdf, generate_receipt_pdf
 from .routes import allocate_repayment, apply_terms, outstanding_balance, serialize_loan
 from .security import customer_required
@@ -103,6 +104,13 @@ def apply_for_own_loan():
         return error('Provide valid positive amount, duration, interestRate, and repaymentFrequency.')
     db.session.add(loan)
     log_action('CUSTOMER_APPLY_FOR_LOAN', 'Loan', loan.id, {'amount': float(loan.amount)})
+    customer = db.session.get(Customer, customer_id)
+    customer_name = customer.full_name if customer else 'A customer'
+    notify_roles(
+        ('admin', 'lender'), type='LOAN_REQUESTED', title='New loan request',
+        message=f'{customer_name} requested KES {loan.amount:,.2f}.',
+        related_entity_type='Loan', related_entity_id=loan.id,
+    )
     db.session.commit()
     return jsonify(loan=serialize_loan(loan)), 201
 

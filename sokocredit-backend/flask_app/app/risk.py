@@ -10,6 +10,8 @@ from customers.scoring import compute_credit_score
 
 from .extensions import db
 from .models import Customer, Loan, RiskAlert
+from .notification_routes import create_notification
+from .notifications import NotificationConfigurationError, NotificationError, send_sms
 
 HIGH_RISK_SCORE_THRESHOLD = 45
 MULTIPLE_MISSED_THRESHOLD = 2
@@ -45,6 +47,18 @@ def scan_for_risk_alerts():
         )
         db.session.add(alert)
         created.append(alert)
+
+        customer = db.session.get(Customer, loan.customer_id)
+        if customer:
+            message = f'Your payment for loan {loan.id[:8]} is {days_overdue} day(s) overdue. Please pay as soon as possible.'
+            create_notification(
+                customer_id=customer.id, type='PAYMENT_OVERDUE', title='Payment overdue',
+                message=message, related_entity_type='Loan', related_entity_id=loan.id,
+            )
+            try:
+                send_sms(customer.phone_number, message)
+            except (NotificationConfigurationError, NotificationError):
+                pass  # SMS is best-effort; the risk scan itself must not fail because of it.
 
     for customer in Customer.query.filter_by(status='ACTIVE').all():
         result = compute_credit_score(customer.id)
