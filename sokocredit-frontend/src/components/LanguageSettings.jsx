@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage, t } from '../utils/i18n';
+import { SUPPORTED_LANGUAGES, setLanguage } from '../utils/i18n';
 import { Globe } from 'lucide-react';
 import useTranslation from '../hooks/useTranslation';
 

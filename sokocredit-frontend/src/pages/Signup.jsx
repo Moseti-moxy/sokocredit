@@ -4,7 +4,6 @@ import { useDispatch } from 'react-redux';
 import { Building2, Eye, EyeOff, ShieldCheck, UserRoundPlus } from 'lucide-react';
 import { signupUser, clearAuthError } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
-import AuthHeroPanel from '../components/AuthHeroPanel';
 import { UNSAFE_PINS } from '../utils/pin';
 
 // Default values match the most common market-trader profile and keep the

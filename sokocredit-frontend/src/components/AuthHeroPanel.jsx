@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function AuthHeroPanel() {
   return (
     <div className="hidden lg:block relative bg-brand-900">
