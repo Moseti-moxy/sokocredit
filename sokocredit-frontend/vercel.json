@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://sokocredit.onrender.com/api/$1" },
+    { "source": "/api/:path*", "destination": "https://sokocredit.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
