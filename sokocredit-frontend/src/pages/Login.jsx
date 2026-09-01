@@ -5,6 +5,7 @@ import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { loginUser, clearAuthError } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
 import ForgotPinModal from '../components/ForgotPinModal';
+import AuthHeroPanel from '../components/AuthHeroPanel';
 
 export default function Login({ portal = 'customer' }) {
   const dispatch = useDispatch();
@@ -47,21 +48,7 @@ export default function Login({ portal = 'customer' }) {
   return (
     <div className="min-h-screen bg-white lg:grid lg:grid-cols-2">
       {/* Hero image - hidden on mobile to keep the form the priority there */}
-      <div className="hidden lg:block relative bg-brand-900">
-        <img
-          src="/signup-market-trader.png"
-          alt="SokoCredit customer at her fresh-produce market stall"
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: '42% center' }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-900/75 via-brand-900/10 to-transparent" />
-        <div className="relative h-full flex flex-col justify-end p-10 text-white">
-          <h2 className="font-display text-2xl font-semibold mb-2">Empowering Market Traders</h2>
-          <p className="text-brand-100 text-sm max-w-sm">
-            Reliable microfinance solutions designed for the rhythm of the modern market. Secure, fast, and transparent.
-          </p>
-        </div>
-      </div>
+      <AuthHeroPanel />
 
       <div className="flex flex-col justify-center bg-white px-6 py-12 sm:px-12 lg:px-16">
         <div className="w-full max-w-sm mx-auto">
@@ -69,6 +56,7 @@ export default function Login({ portal = 'customer' }) {
             <img src="/logo.svg" alt="SokoCredit logo" width={32} height={32} className="h-8 w-8 rounded-lg" />
             <span className="font-display font-semibold text-lg text-brand-700">SokoCredit</span>
           </div>
+          
 
           <h1 className="font-display text-2xl font-semibold text-slate-900 mb-1">{portal === 'staff' ? 'Staff sign in' : 'Customer sign in'}</h1>
           <p className="text-sm text-slate-500 mb-8">{portal === 'staff' ? 'Agents and administrators sign in with their email and password.' : 'Sign in with your registered email or National ID number and your PIN.'}</p>

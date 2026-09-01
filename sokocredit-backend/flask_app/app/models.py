@@ -131,6 +131,12 @@ class Customer(db.Model):
     # agent issues them one - login is refused with a clear message rather than
     # silently accepting an empty/None PIN (see customer_auth_routes.login()).
     pin_hash = db.Column(db.String(255))
+    # Geofencing fields: current location and registered/home location
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    registered_lat = db.Column(db.Float)
+    registered_lng = db.Column(db.Float)
+    zone_radius_m = db.Column(db.Integer, nullable=False, default=200)
     documents = db.relationship('Document', back_populates='customer', cascade='all, delete-orphan', order_by='Document.uploaded_at')
     group = db.relationship('LendingGroup', back_populates='members')
 
@@ -194,6 +200,21 @@ class Repayment(db.Model):
     paid_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
     loan = db.relationship('Loan', back_populates='repayments')
+
+
+class GeofenceAlert(db.Model):
+    __tablename__ = 'geofence_alerts'
+
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    type = db.Column(db.String(32), nullable=False)  # 'agent_checkin' | 'customer_zone_drift'
+    customer_id = db.Column(db.String(36), db.ForeignKey('customers.id'), nullable=False, index=True)
+    agent_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=True, index=True)
+    distance_m = db.Column(db.Float)
+    status = db.Column(db.String(16), nullable=False, default='open')  # 'open' | 'resolved'
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    customer = db.relationship('Customer', backref='geofence_alerts')
+    agent = db.relationship('User')
 
 
 class MpesaStkRequest(db.Model):

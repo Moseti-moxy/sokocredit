@@ -1,4 +1,4 @@
-import { apiClient } from '../../../api/client';
+import { apiClient, USE_MOCK_AUTH } from '../../../api/client';
 import { customers as demoCustomers } from '../../../data/mockData';
 
 const STATUS_LABELS = { ACTIVE: 'Active', INACTIVE: 'Inactive', BLACKLISTED: 'Blacklisted' };
@@ -75,7 +75,10 @@ export async function fetchCustomers(params = {}) {
     }
     return data.customers.map(normalizeCustomer);
   } catch (error) {
-    if (isApiUnavailable(error)) return cloneDemoCustomers();
+    // In demo/mock auth mode treat token validation errors the same as the
+    // API being unavailable so the UI still shows useful seeded data.
+    const status = error?.response?.status;
+    if (USE_MOCK_AUTH || isApiUnavailable(error) || status === 401 || status === 422) return cloneDemoCustomers();
     throw error;
   }
 }
@@ -105,7 +108,8 @@ export async function fetchCreditProfile(id) {
       paymentHistory,
     };
   } catch (error) {
-    if (!isApiUnavailable(error)) throw error;
+    const status = error?.response?.status;
+    if (!isApiUnavailable(error) && !USE_MOCK_AUTH && status !== 401 && status !== 422) throw error;
     const customer = cloneDemoCustomers().find((item) => item.id === id);
     if (!customer) throw error;
     return customer;
