@@ -58,6 +58,11 @@ def request_json(url, *, method='GET', headers=None, payload=None):
         raise MpesaError('M-PESA rejected the request. Check your Daraja credentials and request configuration.') from exc
     except (URLError, json.JSONDecodeError) as exc:
         raise MpesaError('M-PESA request failed.') from exc
+    except ValueError as exc:
+        # http.client rejects a header value containing control characters
+        # (e.g. an embedded newline from a malformed MPESA_* credential) with
+        # a bare ValueError - surface it as a config error instead of a raw 500.
+        raise MpesaConfigurationError('An M-PESA credential is malformed - check it for stray characters or line breaks.') from exc
 
 
 def access_token():

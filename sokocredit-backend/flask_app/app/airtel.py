@@ -48,6 +48,11 @@ def request_json(url, *, method='GET', headers=None, payload=None):
         raise AirtelError('Airtel Money rejected the request. Check your client credentials and payload.') from exc
     except (URLError, json.JSONDecodeError) as exc:
         raise AirtelError('Airtel Money request failed.') from exc
+    except ValueError as exc:
+        # http.client rejects a header value containing control characters
+        # (e.g. an embedded newline from a malformed AIRTEL_* credential) with
+        # a bare ValueError - surface it as a config error instead of a raw 500.
+        raise AirtelConfigurationError('An Airtel Money credential is malformed - check it for stray characters or line breaks.') from exc
 
 
 def access_token():

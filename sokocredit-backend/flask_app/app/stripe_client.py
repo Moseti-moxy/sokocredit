@@ -52,6 +52,11 @@ def _request_form(path, *, method='POST', data=None):
         raise StripeError(message or 'Stripe rejected the request.') from exc
     except (URLError, json.JSONDecodeError) as exc:
         raise StripeError('Stripe request failed.') from exc
+    except ValueError as exc:
+        # http.client rejects a header value containing control characters
+        # (e.g. an embedded newline from a malformed STRIPE_SECRET_KEY) with
+        # a bare ValueError - surface it as a config error instead of a raw 500.
+        raise StripeConfigurationError('STRIPE_SECRET_KEY is malformed - check it for stray characters or line breaks.') from exc
 
 
 def create_payment_intent(*, amount, currency, loan_id, description=None):
