@@ -5,12 +5,15 @@ import { closeNav } from '../features/ui/uiSlice';
 import { logout } from '../features/auth/authSlice';
 import { useAuth } from '../hooks/useAuth';
 import { navItems } from './navConfig';
+import { t } from '../utils/i18n';
+import useTranslation from '../hooks/useTranslation';
 
 export default function NavDrawer() {
   const navOpen = useSelector((state) => state.ui.navOpen);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { role, user } = useAuth();
+  const { lang } = useTranslation();
   const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(role));
 
   function handleLogout() {
@@ -62,7 +65,7 @@ export default function NavDrawer() {
         )}
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {visibleItems.map(({ to, label, icon: Icon, end }) => (
+          {visibleItems.map(({ to, label, labelKey, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -77,7 +80,7 @@ export default function NavDrawer() {
               }
             >
               <Icon size={18} />
-              {label}
+              {t(labelKey, lang) || label}
             </NavLink>
           ))}
           {role === 'admin' && (
@@ -93,7 +96,7 @@ export default function NavDrawer() {
               }
             >
               <Settings size={18} />
-              App Settings
+              {t('nav.appSettings', lang)}
             </NavLink>
           )}
           {role === 'customer' && (
@@ -109,7 +112,7 @@ export default function NavDrawer() {
               }
             >
               <Settings size={18} />
-              Settings
+              {t('nav.settings', lang)}
             </NavLink>
           )}
         </nav>
@@ -120,7 +123,7 @@ export default function NavDrawer() {
             className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
           >
             <LogOut size={18} />
-            Log out
+            {t('nav.logout', lang)}
           </button>
         </div>
       </aside>

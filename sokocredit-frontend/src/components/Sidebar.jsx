@@ -5,9 +5,12 @@ import { Landmark, Settings, LogOut } from 'lucide-react';
 import { navItems } from './navConfig';
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../features/auth/authSlice';
+import { t } from '../utils/i18n';
+import useTranslation from '../hooks/useTranslation';
 
 export default function Sidebar() {
   const { role } = useAuth();
+  const { lang } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(role));
@@ -27,7 +30,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {visibleItems.map(({ to, label, icon: Icon, end }) => (
+        {visibleItems.map(({ to, label, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -41,7 +44,7 @@ export default function Sidebar() {
             }
           >
             <Icon size={18} />
-            {label}
+            {t(labelKey, lang) || label}
           </NavLink>
         ))}
       </nav>
@@ -53,7 +56,7 @@ export default function Sidebar() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-brand-50 hover:text-brand-700"
           >
             <Settings size={18} />
-            App Settings
+            {t('nav.appSettings', lang)}
           </NavLink>
         )}
         {role === 'customer' && (
@@ -62,7 +65,7 @@ export default function Sidebar() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-brand-50 hover:text-brand-700"
           >
             <Settings size={18} />
-            Settings
+            {t('nav.settings', lang)}
           </NavLink>
         )}
         <button
@@ -70,7 +73,7 @@ export default function Sidebar() {
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
         >
           <LogOut size={18} />
-          Log out
+          {t('nav.logout', lang)}
         </button>
       </div>
     </aside>

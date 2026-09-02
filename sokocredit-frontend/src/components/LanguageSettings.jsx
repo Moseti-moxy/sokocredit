@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SUPPORTED_LANGUAGES, setLanguage } from '../utils/i18n';
+import { SUPPORTED_LANGUAGES, setLanguage, t } from '../utils/i18n';
 import { Globe } from 'lucide-react';
 import useTranslation from '../hooks/useTranslation';
 
@@ -23,12 +23,12 @@ export default function LanguageSettings() {
     <div className="bg-white rounded-2xl border border-brand-100 p-5">
       <div className="flex items-center gap-2 mb-4">
         <Globe size={20} className="text-brand-600" />
-        <h2 className="font-display font-semibold text-slate-900">Language Settings</h2>
+        <h2 className="font-display font-semibold text-slate-900">{t('language.title', currentLang)}</h2>
       </div>
-      
-      <p className="text-xs text-slate-500 mb-4">Select your preferred language for the application interface.</p>
-      
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+      <p className="text-xs text-slate-500 mb-4">{t('language.description', currentLang)}</p>
+
+      <div className="grid grid-cols-2 gap-3">
         {Object.entries(SUPPORTED_LANGUAGES).map(([code, lang]) => (
           <button
             key={code}
@@ -52,7 +52,7 @@ export default function LanguageSettings() {
 
       <div className="mt-4 p-3 rounded-lg bg-brand-50 border border-brand-100">
         <p className="text-xs text-brand-700">
-          <span className="font-semibold">Current Language:</span> {SUPPORTED_LANGUAGES[currentLang].nativeName}
+          <span className="font-semibold">{t('language.current', currentLang)}</span> {SUPPORTED_LANGUAGES[currentLang].nativeName}
         </p>
       </div>
     </div>

@@ -4,10 +4,13 @@ import { useDispatch } from 'react-redux';
 import { openNav } from '../features/ui/uiSlice';
 import { mobileTabItems } from './navConfig';
 import { useAuth } from '../hooks/useAuth';
+import { t } from '../utils/i18n';
+import useTranslation from '../hooks/useTranslation';
 
 export default function MobileTabBar() {
   const dispatch = useDispatch();
   const { role } = useAuth();
+  const { lang } = useTranslation();
   const visibleItems = mobileTabItems.filter((item) => !item.roles || item.roles.includes(role));
 
   return (
@@ -16,7 +19,7 @@ export default function MobileTabBar() {
       aria-label="Primary"
     >
       <div className="grid grid-cols-5 h-16">
-        {visibleItems.map(({ to, label, icon: Icon, end }) => (
+        {visibleItems.map(({ to, label, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -28,7 +31,7 @@ export default function MobileTabBar() {
             }
           >
             <Icon size={20} />
-            {label}
+            {t(labelKey, lang) || label}
           </NavLink>
         ))}
         <button
@@ -36,7 +39,7 @@ export default function MobileTabBar() {
           className="flex flex-col items-center justify-center gap-1 text-[11px] font-medium text-slate-400"
         >
           <MoreHorizontal size={20} />
-          More
+          {t('nav.more', lang)}
         </button>
       </div>
     </nav>
