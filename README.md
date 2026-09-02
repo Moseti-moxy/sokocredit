@@ -1,199 +1,114 @@
 # SokoCredit
 
-SokoCredit is a responsive microfinance operations portal for market traders and lending teams. The application gives administrators, field agents, loan officers, and customers role-specific tools for customer onboarding, loan management, repayments, communication, field operations, and reporting.
-
-> This repository contains the React frontend. It currently uses mock data and browser storage for demonstrations, with API modules ready to connect to a backend service.
-
-## Contents
-
-- [Features](#features)
-- [User roles](#user-roles)
-- [Technology](#technology)
-- [Quick start](#quick-start)
-- [Demo accounts](#demo-accounts)
-- [Project structure](#project-structure)
-- [Configuration](#configuration)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Production notes](#production-notes)
+SokoCredit is a full-stack microfinance operations platform for Kenyan market traders and lending teams. It supports customer onboarding, loan and repayment workflows, group lending, field operations, communications, payments, analytics, and customer self-service.
 
 ## Features
 
-### Customer and business management
+- Staff and customer authentication with role-based access
+- Customer KYC, market/stall profiles, document uploads, and self-registration
+- Loan applications, approvals, repayment schedules, renewals, inventory financing, and credit scoring
+- M-Pesa STK Push, Airtel Money, Stripe, SMS, WhatsApp, notifications, audit logs, and reports
+- GPS customer location capture, route optimisation, map markers, and geofence alerts
+- Responsive English/Swahili React interface
 
-- Customer registration with KYC, contact, next-of-kin, market, and business details
-- Customer profiles, loan histories, account views, and customer settings
-- Market location tracking and field-agent route support
-- Business registry verification and customer-business linking
-- Chama/group lending information
+## Architecture
 
-### Lending operations
+```text
+React + Vite (Vercel) ──► Flask API (Render) ──► PostgreSQL
+       │                       │
+       └─ Leaflet/OpenStreetMap └─ M-Pesa, Airtel, Stripe, SMS, WhatsApp
+```
 
-- Loan applications, eligibility checks, review, approval, rejection, and repayment workflows
-- Loan tracking, repayment records, reminders, and renewal recommendations
-- Inventory-financing records for trader stock purchases
-- Credit Reference Bureau (CRB) check interfaces
-- Risk-management, analytics, audit-log, and reporting dashboards
-
-### Communication and administration
-
-- Role-specific customer, agent, and administrator communication screens
-- WhatsApp, SMS, and email workflow interfaces
-- Admin agent directory with assigned station, active/inactive status, last-active time, filters, and search
-- Role-based route protection and navigation
-- English and Swahili language support
-
-### User experience
-
-- Mobile, tablet, and desktop responsive layouts
-- Sidebar, drawer, and mobile tab navigation adapted to screen size
-- Loading, empty-state, and error feedback in key workflows
-
-## User roles
-
-| Role | Main capabilities |
+| Directory | Purpose |
 | --- | --- |
-| **Administrator** | Full operational access, staff/agent monitoring, audit logs, communication center, and application settings. |
-| **Field agent** | Customer onboarding, customer records, lending workflows, risk tools, locations, and customer support. |
-| **Loan officer** | Loan-officer dashboard, loan reviews, inventory financing, renewals, and portfolio operations. |
-| **Customer** | Customer dashboard, loan information, messages, notifications, and account settings. |
+| `sokocredit-frontend/` | React 19/Vite web application |
+| `sokocredit-backend/flask_app/` | Flask API, SQLAlchemy models, Alembic migrations, and tests |
+| `sokocredit-backend/` | Render deployment configuration and Python dependencies |
 
-> Frontend role protection controls the interface. A connected backend must enforce authorization for real protected data and actions.
+## Prerequisites
 
-## Technology
+- Node.js 20+
+- Python 3.12+
+- PostgreSQL 14+
+- npm and Git
 
-| Technology | Purpose |
-| --- | --- |
-| React 19 | Component-based user interface |
-| Vite | Development server and production bundling |
-| Redux Toolkit | Authentication and application state |
-| React Router | Protected, role-based routing |
-| Tailwind CSS | Responsive styling and design system |
-| Lucide React | Interface icons |
-| Recharts | Reporting and analytics visualizations |
-| Vitest + Testing Library | Unit and component tests |
+## Local setup
 
-## Quick start
-
-### Prerequisites
-
-- Node.js 20 or later
-- npm 10 or later
-- Git
-
-### Install and run locally
+### Backend
 
 ```bash
-git clone https://github.com/Moseti-moxy/sokocredit.git
-cd sokocredit/sokocredit-frontend
+cd sokocredit-backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp flask_app/.env.example flask_app/.env
+cd flask_app
+flask --app run.py db upgrade
+flask --app run.py run --debug
+```
+
+Set a local PostgreSQL `DATABASE_URL`, strong `JWT_SECRET_KEY`, and generated `FIELD_ENCRYPTION_KEY` in `flask_app/.env`. The API is available at `http://localhost:5000`; use `GET /api/health` to check it.
+
+### Frontend
+
+```bash
+cd sokocredit-frontend
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-Vite prints the local application address in the terminal, typically `http://localhost:5173`.
-
-### Production build
-
-```bash
-cd sokocredit-frontend
-npm run build
-npm run preview
-```
-
-The production-ready static files are generated in `sokocredit-frontend/dist/`.
-
-## Demo accounts
-
-Mock authentication is enabled by default. Use the appropriate portal at `/login` or `/staff/login`.
-
-| Portal | Identifier | PIN | Try this workflow |
-| --- | --- | --- | --- |
-| Staff | `ADM-0001` | `1001` | Open **Agents** to manage stations and monitor activity. |
-| Staff | `AGT-0001` | `1234` | Explore customer onboarding and field-agent operations. |
-| Staff | `LO-0001` | `5555` | Review the loan-officer workspace. |
-| Customer | `12345678` | `1234` | View the customer dashboard, messages, and settings. |
-
-Demo accounts, locally created users, and agent presence data are stored in browser storage. Clear the site data to reset them.
-
-## Project structure
-
-```text
-sokocredit/
-├── README.md                         # Repository overview (this file)
-└── sokocredit-frontend/
-    ├── public/                       # Static assets and Netlify SPA redirect
-    ├── src/
-    │   ├── api/                      # Shared HTTP client
-    │   ├── app/                      # Redux store
-    │   ├── components/               # Reusable navigation and UI components
-    │   ├── data/                     # Mock accounts, sample data, agent presence
-    │   ├── features/                 # Auth, customers, loans, communications, etc.
-    │   ├── hooks/                    # Reusable React hooks
-    │   ├── pages/                    # Route-level screens
-    │   └── utils/                    # Formatting, translations, IDs, time helpers
-    ├── package.json                  # Scripts and frontend dependencies
-    └── vite.config.js                # Vite and test configuration
-```
-
-For more implementation detail, see the [frontend README](./sokocredit-frontend/README.md).
-
-## Configuration
-
-Create `sokocredit-frontend/.env` when you need to override defaults:
+To use the local Flask API, set:
 
 ```env
-# Set to false when a real backend is available.
-VITE_USE_MOCK_AUTH=true
-
-# URL of the backend API when mock authentication is disabled.
 VITE_API_BASE_URL=http://localhost:5000/api
+VITE_USE_MOCK_AUTH=false
 ```
 
-When integrating a backend, set `VITE_USE_MOCK_AUTH=false` and provide the deployed API URL. Never place secrets, payment credentials, or private keys in `VITE_` variables because Vite exposes them to the browser.
+Vite normally runs at `http://localhost:5173`.
 
-## Testing
+## Location and geofencing
 
-Run all checks before opening a pull request or deploying:
+Location capture is consent-based and requires HTTPS or `localhost`.
+
+1. A staff member or customer chooses **Capture/Record location**.
+2. The browser requests permission and returns GPS coordinates.
+3. The first verified point becomes the customer’s geofence center.
+4. Later reports outside the zone create an alert.
+5. Staff can review and resolve open alerts on **Customer Locations**.
+
+Route optimisation uses the field agent’s current position and stored active-customer locations.
+
+## Commands
 
 ```bash
+# Frontend
 cd sokocredit-frontend
 npm run lint
 npm test
 npm run build
+
+# Backend
+cd sokocredit-backend/flask_app
+pytest
+flask --app run.py db upgrade
 ```
 
-- `npm run lint` checks code quality with ESLint.
-- `npm test` runs the Vitest test suite.
-- `npm run build` verifies that Vite can produce a deployable build.
+## Configuration and integrations
+
+`sokocredit-backend/flask_app/.env.example` documents all configuration, including database, CORS, encryption, M-Pesa, Airtel, Stripe, Africa’s Talking SMS, Meta WhatsApp, CRB, and business-registry settings. Keep secrets out of version control.
 
 ## Deployment
 
-The app is configured as a single-page application. The [`_redirects`](./sokocredit-frontend/public/_redirects) file sends client-side routes such as `/login` back to `index.html`.
+- `sokocredit-backend/render.yaml` provisions the Flask service and PostgreSQL database on Render; it applies migrations before Gunicorn starts.
+- `sokocredit-frontend/vercel.json` proxies `/api/*` to the Render API and rewrites client routes to `index.html`.
 
-For Netlify, configure the repository as follows:
+Before production, configure `CORS_ORIGINS`, durable JWT/encryption secrets, HTTPS callback URLs, backups, monitoring, and provider credentials.
 
-| Setting | Value when the Base directory is `sokocredit-frontend` |
-| --- | --- |
-| Build command | `npm run build` |
-| Publish directory | `dist` |
+## Security
 
-If you leave the Base directory blank, use:
-
-| Setting | Value |
-| --- | --- |
-| Build command | `npm --prefix sokocredit-frontend run build` |
-| Publish directory | `sokocredit-frontend/dist` |
-
-## Production notes
-
-This version is a frontend demonstration and should not process real financial or personal data until production services are in place. Before launch, implement:
-
-- Server-side authentication, authorization, validation, and audit logging
-- Secure database storage, backups, monitoring, and error reporting
-- Secure M-Pesa/payment verification and private credential management
-- Rate limiting, session security, and data-protection controls
-- Real integrations for CRB, communication channels, business verification, and locations
+SokoCredit handles financial and personal data. Use production-grade secrets, restrict CORS, protect API keys and `.env` files, back up PostgreSQL, and complete provider verification before processing live payments or CRB data.
 
 ## License
 
-This project is currently intended for educational and demonstration use.
+Educational and demonstration use unless a project license is added.
