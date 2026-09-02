@@ -13,9 +13,13 @@ import { createCustomerNotification } from '../../notifications/notifications'
 
 const storageKey = 'sokocredit-loans-v2'
 const savedLoans = () => { try { const data = JSON.parse(localStorage.getItem(storageKey)); return Array.isArray(data) ? data : seedLoans } catch { return seedLoans } }
-const frontendLoan = (loan) => ({
-  id: loan.id, customerId: loan.customerId, customer: loan.customerId, initials: String(loan.customerId || 'CU').slice(0, 2).toUpperCase(), business: loan.purpose || 'Loan customer', amount: Number(loan.amount), interestRate: Number(loan.interestRate), duration: Number(loan.duration), frequency: loan.repaymentFrequency || loan.frequency, purpose: loan.purpose, paid: 0, progress: 0, status: loan.status === 'ACTIVE' ? 'Repaying' : loan.status === 'PENDING' ? 'Pending' : loan.status === 'APPROVED' ? 'Approved' : loan.status, due: 'Scheduled', appliedAt: loan.appliedAt?.slice(0, 10), approvedAt: loan.decision?.decidedAt?.slice(0, 10), schedule: [],
-})
+const frontendLoan = (loan, customers = []) => {
+  const matchedCustomer = customers.find((customer) => customer.id === loan.customerId)
+  const customerName = matchedCustomer?.name || loan.customerId
+  return {
+    id: loan.id, customerId: loan.customerId, customer: customerName, initials: String(customerName || 'CU').slice(0, 2).toUpperCase(), business: loan.purpose || matchedCustomer?.business || 'Loan customer', amount: Number(loan.amount), interestRate: Number(loan.interestRate), duration: Number(loan.duration), frequency: loan.repaymentFrequency || loan.frequency, purpose: loan.purpose, paid: 0, progress: 0, status: loan.status === 'ACTIVE' ? 'Repaying' : loan.status === 'PENDING' ? 'Pending' : loan.status === 'APPROVED' ? 'Approved' : loan.status, due: 'Scheduled', appliedAt: loan.appliedAt?.slice(0, 10), approvedAt: loan.decision?.decidedAt?.slice(0, 10), schedule: [],
+  }
+}
 
 export default function LoanManagementPage() {
   const dispatch = useDispatch()
@@ -33,13 +37,14 @@ export default function LoanManagementPage() {
   // customer screen, never a browser-only or mock list.
   useEffect(() => { dispatch(loadCustomers()) }, [dispatch])
   useEffect(() => {
+    if (!customers.length) return undefined
     let active = true
     getBackendLoans().then((backendLoans) => {
       if (!active || !backendLoans.length) return
-      setLoans(backendLoans.map(frontendLoan))
+      setLoans(backendLoans.map((loan) => frontendLoan(loan, customers)))
     }).catch(() => {})
     return () => { active = false }
-  }, [])
+  }, [customers])
   useEffect(() => { if (!notice) return undefined; const timer = setTimeout(() => setNotice(null), 5000); return () => clearTimeout(timer) }, [notice])
   const shown = useMemo(() => loans.filter((loan) => loan.customer.toLowerCase().includes(search.toLowerCase()) && (status === 'All Status' || (status === 'Overdue' ? loan.status.includes('Overdue') : loan.status === status))), [loans, search, status])
   const update = (id, changes) => setLoans((items) => items.map((loan) => loan.id === id ? { ...loan, ...changes } : loan))
