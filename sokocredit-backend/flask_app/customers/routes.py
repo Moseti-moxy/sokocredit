@@ -250,6 +250,9 @@ def create_customer():
     )
     try:
         apply_fields(customer, values)
+        if customer.latitude is not None and customer.longitude is not None:
+            customer.registered_lat = customer.latitude
+            customer.registered_lng = customer.longitude
         db.session.add(customer)
         log_action('CREATE_CUSTOMER', 'Customer', customer.id, {'market': customer.market})
         db.session.commit()

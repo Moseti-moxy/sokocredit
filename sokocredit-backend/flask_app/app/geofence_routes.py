@@ -53,11 +53,20 @@ def update_customer_location(id):
         lng = float(values.get('longitude'))
     except (TypeError, ValueError):
         return error('Invalid coordinates', 400)
+    if not -90 <= lat <= 90 or not -180 <= lng <= 180:
+        return error('Invalid coordinates', 400)
     customer = db.session.get(Customer, id)
     if not customer:
         return error('Customer not found', 404)
     customer.latitude = lat
     customer.longitude = lng
+    # The first verified point becomes the customer's registered location.
+    # Later reports are compared to it and can generate a drift alert.
+    if customer.registered_lat is None or customer.registered_lng is None:
+        customer.registered_lat = lat
+        customer.registered_lng = lng
+        db.session.commit()
+        return jsonify(message='Location registered', registered=True)
     # Compare with registered location
     if customer.registered_lat is not None and customer.registered_lng is not None:
         dist = calculate_distance(customer.registered_lat, customer.registered_lng, lat, lng)

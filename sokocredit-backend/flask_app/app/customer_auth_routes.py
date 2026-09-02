@@ -134,6 +134,7 @@ def register():
         business_name='Not yet provided', market='Not yet provided', stall_number='Not yet provided',
         years_in_business=0, daily_turnover=0, registered_by='SELF', pin_hash=hash_password(pin),
         latitude=latitude, longitude=longitude,
+        registered_lat=latitude, registered_lng=longitude,
     )
     try:
         db.session.add(customer)

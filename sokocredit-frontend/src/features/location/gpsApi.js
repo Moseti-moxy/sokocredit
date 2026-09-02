@@ -11,12 +11,28 @@ function isApiUnavailable(error) {
 function normalizeLocation(customer) {
   return {
     id: customer.id,
-    name: customer.fullName,
+    name: customer.fullName || customer.name,
     market: customer.market || '—',
     lat: customer.latitude,
     lng: customer.longitude,
     status: customer.status === 'ACTIVE' ? 'Active' : 'Inactive',
   };
+}
+
+function normalizeAlert(alert) {
+  return {
+    id: alert.id,
+    type: alert.type,
+    customerId: alert.customerId,
+    distanceM: alert.distanceM,
+    status: alert.status,
+    createdAt: alert.createdAt,
+  };
+}
+
+export async function fetchLocationCustomers() {
+  const { data } = await apiClient.get('/customers', { params: { status: 'ACTIVE' } });
+  return (data.customers || []).map(normalizeLocation);
 }
 
 export async function fetchCustomerLocations() {
@@ -49,4 +65,24 @@ export async function optimizeRoute({ startLat, startLng, market }) {
     if (isApiUnavailable(error)) return { route: [], totalDistanceKm: 0, unavailable: true };
     throw error;
   }
+}
+
+export async function recordCustomerLocation(customerId, { latitude, longitude }) {
+  const { data } = await apiClient.post(`/customers/${customerId}/location`, { latitude, longitude });
+  return data;
+}
+
+export async function fetchGeofenceAlerts() {
+  try {
+    const { data } = await apiClient.get('/geofence-alerts', { params: { status: 'open', per_page: 20 } });
+    return (data.items || []).map(normalizeAlert);
+  } catch (error) {
+    if (USE_MOCK_AUTH || isApiUnavailable(error)) return [];
+    throw error;
+  }
+}
+
+export async function resolveGeofenceAlert(alertId) {
+  await apiClient.patch(`/geofence-alerts/${alertId}`, { status: 'resolved' });
+  return alertId;
 }
