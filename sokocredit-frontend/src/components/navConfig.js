@@ -1,4 +1,4 @@
-import { Home, Users, Landmark, BarChart3, ShieldAlert, ScrollText, FileBarChart, UserPlus, UsersRound, Package, MapPin, CheckCircle, MessageCircle, Building2, TrendingUp } from 'lucide-react';
+import { Home, Users, Landmark, BarChart3, ShieldAlert, ScrollText, FileBarChart, UserPlus, UsersRound, Package, MapPin, MessageCircle, TrendingUp } from 'lucide-react';
 
 // Primary nav — shown in full on the desktop sidebar and tablet drawer.
 // `roles` restricts a link to specific roles (matches ProtectedRoute in
@@ -12,13 +12,11 @@ export const navItems = [
   { to: '/loans', label: 'Loans', labelKey: 'nav.loans', icon: Landmark, roles: ['admin', 'agent', 'loan_officer'] },
   { to: '/loan-renewals', label: 'Renewals', labelKey: 'nav.renewals', icon: TrendingUp, roles: ['admin', 'agent', 'loan_officer'] },
   { to: '/inventory', label: 'Inventory', labelKey: 'nav.inventory', icon: Package, roles: ['admin', 'agent', 'loan_officer'] },
-  { to: '/crb-checks', label: 'Credit Checks', labelKey: 'nav.creditChecks', icon: CheckCircle, roles: ['admin', 'agent'] },
   { to: '/location', label: 'Locations', labelKey: 'nav.locations', icon: MapPin, roles: ['admin', 'agent'] },
   // Role-specific communication/messaging
   { to: '/messages', label: 'Messages', labelKey: 'nav.messages', icon: MessageCircle, roles: ['customer'] },
   { to: '/customer-support', label: 'Customer Support', labelKey: 'nav.customerSupport', icon: MessageCircle, roles: ['agent'] },
   { to: '/communication-center', label: 'Communication Center', labelKey: 'nav.communicationCenter', icon: MessageCircle, roles: ['admin'] },
-  { to: '/business-registry', label: 'Business Registry', labelKey: 'nav.businessRegistry', icon: Building2, roles: ['admin', 'agent'] },
   { to: '/analytics', label: 'Analytics', labelKey: 'nav.analytics', icon: BarChart3, roles: ['admin', 'agent'] },
   { to: '/reports', label: 'Reports', labelKey: 'nav.reports', icon: FileBarChart, roles: ['admin', 'agent'] },
   { to: '/risk', label: 'Risk', labelKey: 'nav.risk', icon: ShieldAlert, roles: ['admin', 'agent'] },
