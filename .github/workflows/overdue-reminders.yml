@@ -1,0 +1,40 @@
+name: Overdue Reminders
+
+# Nothing in the deployment calls app/reminders_routes.py's /run endpoint or
+# app/risk_routes.py's /scan endpoint on its own (Render's free web-service
+# tier has no built-in scheduler - see cli.py's send_overdue_reminders
+# docstring). This workflow is that missing scheduler: log in as staff, then
+# trigger both endpoints daily so overdue/due-soon reminders and risk alerts
+# actually go out without a human clicking a button.
+
+on:
+  schedule:
+    - cron: '23 6 * * *' # ~09:23 EAT daily
+  workflow_dispatch: {}
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in and trigger reminders + risk scan
+        env:
+          API_BASE: https://sokocredit.onrender.com/api
+          STAFF_EMAIL: ${{ secrets.SOKOCREDIT_STAFF_EMAIL }}
+          STAFF_PASSWORD: ${{ secrets.SOKOCREDIT_STAFF_PASSWORD }}
+        run: |
+          set -e
+          token=$(curl -sf -X POST "$API_BASE/auth/login" \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$STAFF_EMAIL\",\"password\":\"$STAFF_PASSWORD\"}" \
+            | python3 -c "import sys, json; print(json.load(sys.stdin)['accessToken'])")
+
+          echo "== Sending due-soon/overdue repayment reminders (SMS) =="
+          curl -sf -X POST "$API_BASE/reminders/run" \
+            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            -d '{"channel":"SMS"}'
+          echo ""
+
+          echo "== Scanning for new overdue-loan risk alerts =="
+          curl -sf -X POST "$API_BASE/risk/scan" \
+            -H "Authorization: Bearer $token"
+          echo ""
