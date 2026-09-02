@@ -10,7 +10,7 @@ line that can quietly disappear.
 from flask import request
 
 from .extensions import db
-from .models import AuditLog, User
+from .models import AuditLog, Customer, User
 from .security import current_user_id
 
 
@@ -41,7 +41,17 @@ def log_action(action, entity_type, entity_id=None, details=None):
     user_email = None
     if user_id:
         user = db.session.get(User, user_id)
-        user_email = user.email if user else None
+        if user:
+            user_email = user.email
+        else:
+            # AuditLog.user_id is a foreign key to users.id - a customer's JWT
+            # identity is a Customer id, which has no matching row there, so
+            # writing it verbatim would violate the FK and crash the whole
+            # request. Record the customer's name for attribution instead and
+            # leave user_id unset for customer-initiated actions.
+            customer = db.session.get(Customer, user_id)
+            user_email = customer.name if customer else None
+            user_id = None
     entry = AuditLog(
         user_id=user_id,
         user_email=user_email,
