@@ -33,6 +33,16 @@ def body():
     return request.get_json(silent=True) or {}
 
 
+def coordinate(value, *, minimum, maximum):
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise ValueError('Invalid coordinates.')
+    if not minimum <= result <= maximum:
+        raise ValueError('Invalid coordinates.')
+    return result
+
+
 def serialize_customer_account(customer):
     return {
         'id': customer.id, 'fullName': customer.full_name, 'phoneNumber': customer.phone_number,
@@ -94,8 +104,16 @@ def register():
         return error('password (PIN) must be at least 4 characters.')
     try:
         phone = normalize_phone_number(values.get('phoneNumber'))
+        has_latitude = values.get('latitude') is not None
+        has_longitude = values.get('longitude') is not None
+        if has_latitude != has_longitude:
+            return error('Latitude and longitude must be provided together.')
+        latitude = coordinate(values['latitude'], minimum=-90, maximum=90) if has_latitude else None
+        longitude = coordinate(values['longitude'], minimum=-180, maximum=180) if has_longitude else None
     except MpesaError as exc:
         return error(str(exc))
+    except ValueError:
+        return error('Latitude or longitude is invalid.')
 
     if Customer.query.filter(
         db.or_(
@@ -115,6 +133,7 @@ def register():
         email=email, email_hash=blind_index(email) if email else None,
         business_name='Not yet provided', market='Not yet provided', stall_number='Not yet provided',
         years_in_business=0, daily_turnover=0, registered_by='SELF', pin_hash=hash_password(pin),
+        latitude=latitude, longitude=longitude,
     )
     try:
         db.session.add(customer)

@@ -110,6 +110,9 @@ export const signupUser = createAsyncThunk(
         nationalId: customerId,
         phoneNumber: profile?.phone,
         password: pin,
+        ...(profile?.latitude != null && profile?.longitude != null
+          ? { latitude: profile.latitude, longitude: profile.longitude }
+          : {}),
       });
       return { token: data.accessToken, user: normalizeUser({ ...data.customer, role: 'customer' }) };
     } catch (err) {

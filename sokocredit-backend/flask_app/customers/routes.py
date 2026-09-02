@@ -29,6 +29,17 @@ def is_blank(value):
     return value is None or not str(value).strip()
 
 
+def coordinate(value, *, minimum, maximum):
+    """Return a finite coordinate within its geographic range."""
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise ValueError('Invalid coordinates.')
+    if not minimum <= result <= maximum:
+        raise ValueError('Invalid coordinates.')
+    return result
+
+
 def customer_or_404(customer_id):
     return db.session.get(Customer, customer_id)
 
@@ -121,9 +132,9 @@ def apply_fields(customer, values):
     if 'address' in values:
         customer.address = values['address']
     if 'latitude' in values:
-        customer.latitude = values['latitude']
+        customer.latitude = coordinate(values['latitude'], minimum=-90, maximum=90)
     if 'longitude' in values:
-        customer.longitude = values['longitude']
+        customer.longitude = coordinate(values['longitude'], minimum=-180, maximum=180)
     if 'seasonalPattern' in values:
         customer.seasonal_pattern = values['seasonalPattern']
     if 'status' in values:
@@ -203,8 +214,19 @@ def create_customer():
 
     try:
         values['phoneNumber'] = normalize_phone_number(values['phoneNumber'])
+        # Coordinates are optional during onboarding, but if one is supplied
+        # both must be present so a customer cannot be plotted at (0, 0).
+        has_latitude = values.get('latitude') is not None
+        has_longitude = values.get('longitude') is not None
+        if has_latitude != has_longitude:
+            return error('Latitude and longitude must be provided together.')
+        if has_latitude:
+            values['latitude'] = coordinate(values['latitude'], minimum=-90, maximum=90)
+            values['longitude'] = coordinate(values['longitude'], minimum=-180, maximum=180)
     except MpesaError as exc:
         return error(str(exc))
+    except ValueError:
+        return error('Latitude or longitude is invalid.')
 
     # Phone numbers and national IDs identify one real person. Checking both
     # prevents the same customer being silently registered twice by different
