@@ -44,7 +44,7 @@ def required_config():
 def check_customer(*, national_id, full_name):
     """Runs a credit check against the configured bureau. Returns a normalized
     dict: {'score', 'rating', 'flags': [...], 'raw': <provider response>}.
-    """
+    """ 
     required_config()
     payload = json.dumps({'nationalId': national_id, 'fullName': full_name}).encode()
     request_obj = Request(

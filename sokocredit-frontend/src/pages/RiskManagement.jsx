@@ -1,13 +1,8 @@
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Link } from 'react-router-dom';
 import AppShell from '../components/AppShell';
-import { creditScoreDistribution, delinquencyTrends, crbIntegrations, highRiskAccounts } from '../data/mockData';
+import { creditScoreDistribution, delinquencyTrends, highRiskAccounts } from '../data/mockData';
 import { formatKES } from '../utils/format';
-
-const statusStyle = {
-  Active: 'bg-brand-50 text-brand-700',
-  'Sync Error': 'bg-red-50 text-red-600',
-};
 
 export default function RiskManagement() {
   return (
@@ -31,21 +26,13 @@ export default function RiskManagement() {
         </div>
 
         <div className="bg-white rounded-2xl border border-brand-100 p-5">
-          <h2 className="font-display font-semibold text-slate-900 mb-4">CRB Integration</h2>
-          <p className="text-xs text-slate-500 mb-4">Real-time sync status with regional Credit Reference Bureaus.</p>
+          <h2 className="font-display font-semibold text-slate-900 mb-2">Portfolio Risk Focus</h2>
+          <p className="text-xs text-slate-500 mb-4">Use repayment performance and internal credit scores to prioritise follow-up.</p>
           <div className="space-y-2 mb-4">
-            {crbIntegrations.map((c) => (
-              <div key={c.id} className="flex items-center justify-between bg-brand-50/40 rounded-lg px-3 py-2.5">
-                <span className="text-sm font-medium text-slate-700">{c.label}</span>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle[c.status] || 'bg-slate-100 text-slate-600'}`}>
-                  {c.status}
-                </span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between bg-brand-50/40 rounded-lg px-3 py-2.5"><span className="text-sm font-medium text-slate-700">Accounts requiring review</span><span className="text-xs font-medium rounded-full bg-amber-50 px-2 py-1 text-amber-700">{highRiskAccounts.length}</span></div>
+            <div className="flex items-center justify-between bg-brand-50/40 rounded-lg px-3 py-2.5"><span className="text-sm font-medium text-slate-700">Highest delinquency band</span><span className="text-xs font-medium rounded-full bg-red-50 px-2 py-1 text-red-600">30 days late</span></div>
           </div>
-          <Link to="/settings" className="block w-full border border-brand-200 text-brand-700 font-medium rounded-xl py-2.5 text-sm hover:bg-brand-50 text-center">
-            Manage Integrations
-          </Link>
+          <Link to="/reports#high-risk-borrowers" className="block w-full border border-brand-200 text-brand-700 font-medium rounded-xl py-2.5 text-sm hover:bg-brand-50 text-center">Review High-Risk Accounts</Link>
         </div>
       </div>
 

@@ -68,6 +68,9 @@ export default function Sidebar() {
             {t('nav.settings', lang)}
           </NavLink>
         )}
+        {role === 'agent' && (
+          <NavLink to="/agent-settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-brand-50 hover:text-brand-700"><Settings size={18} />{t('nav.settings', lang)}</NavLink>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"

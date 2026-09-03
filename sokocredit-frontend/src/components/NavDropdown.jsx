@@ -120,6 +120,9 @@ export default function NavDropdown() {
                 {t('nav.settings', lang)}
               </NavLink>
             )}
+            {role === 'agent' && (
+              <NavLink to="/agent-settings" onClick={() => setIsOpen(false)} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-brand-500 text-white' : 'text-slate-600 hover:bg-brand-50 hover:text-brand-700'}`}><Settings size={18} />{t('nav.settings', lang)}</NavLink>
+            )}
           </nav>
 
           {/* Footer */}

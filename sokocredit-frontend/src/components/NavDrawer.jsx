@@ -115,6 +115,9 @@ export default function NavDrawer() {
               {t('nav.settings', lang)}
             </NavLink>
           )}
+          {role === 'agent' && (
+            <NavLink to="/agent-settings" onClick={() => dispatch(closeNav())} className={({ isActive }) => `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium ${isActive ? 'bg-brand-500 text-white' : 'text-slate-600 hover:bg-brand-50 hover:text-brand-700'}`}><Settings size={18} />{t('nav.settings', lang)}</NavLink>
+          )}
         </nav>
 
         <div className="px-3 pb-6 pt-2 border-t border-brand-50">
