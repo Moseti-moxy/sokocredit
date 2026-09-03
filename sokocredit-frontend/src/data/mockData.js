@@ -162,16 +162,10 @@ export const delinquencyTrends = [
   { label: '90+ Days Late', pct: 2.1 },
 ];
 
-export const crbIntegrations = [
-  { id: 'transunion', label: 'TransUnion', status: 'Active' },
-  { id: 'metropol', label: 'Metropol', status: 'Active' },
-  { id: 'creditinfo', label: 'CreditInfo', status: 'Sync Error' },
-];
-
 export const highRiskAccounts = [
   { id: 'TRD-8821', factor: 'Business Instability', exposure: 450000 },
   { id: 'TRD-9014', factor: '60 Days Late', exposure: 120000 },
-  { id: 'TRD-7654', factor: 'CRB Flag', exposure: 85000 },
+  { id: 'TRD-7654', factor: 'Missed repayment history', exposure: 85000 },
 ];
 
 // --- Reports & Payment Pattern data (Dev 4 cards) ---------------------

@@ -11,6 +11,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Reports = lazy(() => import('./pages/Reports'));
 const RiskManagement = lazy(() => import('./pages/RiskManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
+const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
@@ -78,6 +79,7 @@ export default function App() {
         </Route>
         <Route element={<ProtectedRoute allowedRoles={['agent']} />}>
           <Route path="/customer-support" element={<AgentSupportInbox />} />
+          <Route path="/agent-settings" element={<AgentSettings />} />
         </Route>
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="/communication-center" element={<AdminCommunicationCenter />} />
