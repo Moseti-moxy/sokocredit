@@ -22,19 +22,34 @@ jobs:
           STAFF_EMAIL: ${{ secrets.SOKOCREDIT_STAFF_EMAIL }}
           STAFF_PASSWORD: ${{ secrets.SOKOCREDIT_STAFF_PASSWORD }}
         run: |
-          set -e
-          token=$(curl -sf -X POST "$API_BASE/auth/login" \
-            -H 'Content-Type: application/json' \
-            -d "{\"email\":\"$STAFF_EMAIL\",\"password\":\"$STAFF_PASSWORD\"}" \
-            | python3 -c "import sys, json; print(json.load(sys.stdin)['accessToken'])")
+          set -eo pipefail
+
+          # curl -f hides the response body on a non-2xx, which is exactly what
+          # you need to see to tell "bad credentials" (401) apart from "account
+          # isn't admin/lender" (403) apart from "Render is down" (502/504).
+          # So instead of -f: capture status + body, print the body whenever
+          # the call didn't return 2xx, and fail the step ourselves.
+          call() {
+            local method=$1 url=$2 data=${3:-} auth=${4:-}
+            local args=(-s -o /tmp/resp.json -w '%{http_code}' -X "$method" "$url" -H 'Content-Type: application/json')
+            [ -n "$auth" ] && args+=(-H "Authorization: Bearer $auth")
+            [ -n "$data" ] && args+=(-d "$data")
+            local status
+            status=$(curl "${args[@]}")
+            cat /tmp/resp.json
+            echo ""
+            if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+              echo "::error::$method $url failed with HTTP $status" >&2
+              exit 1
+            fi
+          }
+
+          echo "== Logging in as staff =="
+          call POST "$API_BASE/auth/login" "{\"email\":\"$STAFF_EMAIL\",\"password\":\"$STAFF_PASSWORD\"}"
+          token=$(python3 -c "import json; print(json.load(open('/tmp/resp.json'))['accessToken'])")
 
           echo "== Sending due-soon/overdue repayment reminders (SMS) =="
-          curl -sf -X POST "$API_BASE/reminders/run" \
-            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-            -d '{"channel":"SMS"}'
-          echo ""
+          call POST "$API_BASE/reminders/run" '{"channel":"SMS"}' "$token"
 
           echo "== Scanning for new overdue-loan risk alerts =="
-          curl -sf -X POST "$API_BASE/risk/scan" \
-            -H "Authorization: Bearer $token"
-          echo ""
+          call POST "$API_BASE/risk/scan" "" "$token"
